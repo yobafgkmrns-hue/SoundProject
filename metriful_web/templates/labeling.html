@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calibration État Fenêtre</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 16px rgba(0,0,0,.05); }
+        .controls { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .controls label { font-weight: 500; }
+        .controls input[type="datetime-local"], .controls select, .controls button {
+            padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;
+        }
+        #status-message { margin-left: 20px; font-weight: bold; }
+        #chart-container { position: relative; height: 50vh; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Outil de Calibration - État de la Fenêtre</h1>
+        <p>Cliquez sur le graphique à l'heure exacte d'une ouverture ou d'une fermeture pour ajouter une correction manuelle.</p>
+        
+        <div class="controls">
+            <label for="datetime-picker">Ajout manuel précis :</label>
+            <input type="datetime-local" id="datetime-picker">
+            <select id="status-select">
+                <option value="ouverte">Ouverte</option>
+                <option value="fermee">Fermée</option>
+            </select>
+            <button id="add-label-btn">Ajouter Label</button>
+            <span id="status-message"></span>
+        </div>
+        
+        <div id="chart-container">
+            <canvas id="labelingChart"></canvas>
+        </div>
+        <p><a href="/">Retour au tableau de bord principal</a></p>
+    </div>
+
+<script>
+    const detectedEvents = {{ detected_events | tojson | safe }};
+    const manualLabels = {{ manual_labels | tojson | safe }};
+    let chart;
+
+    function createSeries(events, label, color, stepped = false) {
+        if (!events || events.length === 0) return { data: [] };
+
+        const points = events.map(e => ({
+            x: new Date(e.timestamp_iso).getTime(),
+            y: e.status === 'ouverte' ? 1 : 0
+        }));
+
+        // Pour un graphique en escalier, on doit dupliquer les points pour créer les paliers
+        const data = [];
+        for (let i = 0; i < points.length; i++) {
+            if (i > 0) {
+                data.push({ x: points[i].x, y: points[i - 1].y });
+            }
+            data.push(points[i]);
+        }
+        
+        return {
+            label: label,
+            data: data,
+            borderColor: color,
+            backgroundColor: color.replace('1)', '0.3)'),
+            stepped: stepped,
+            fill: stepped,
+            pointRadius: stepped ? 0 : 6,
+            pointHoverRadius: stepped ? 0 : 8,
+            showLine: stepped,
+        };
+    }
+
+    function renderChart() {
+        const ctx = document.getElementById('labelingChart').getContext('2d');
+        const detectedSeries = createSeries(detectedEvents, 'Détection Automatique', 'rgba(255, 159, 64, 1)', true);
+        const manualSeries = createSeries(manualLabels, 'Labels Manuels', 'rgba(54, 162, 235, 1)', false);
+
+        if (chart) {
+            chart.destroy();
+        }
+
+        chart = new Chart(ctx, {
+            type: 'line', // Le type 'line' permet de superposer des lignes et des points
+            data: { datasets: [detectedSeries, manualSeries] },
+            options: {
+                onClick: handleChartClick,
+                scales: {
+                    x: { type: 'time', time: { tooltipFormat: 'dd/MM/yyyy HH:mm:ss' } },
+                    y: {
+                        min: -0.2, max: 1.2,
+                        ticks: {
+                            callback: v => (v === 0 ? 'Fermée' : v === 1 ? 'Ouverte' : '')
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `État: ${context.raw.y === 1 ? 'Ouverte' : 'Fermée'}`
+                        }
+                    }
+                },
+                interaction: { mode: 'index', intersect: false },
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    async function addLabel(timestamp, status) {
+        const statusMsg = document.getElementById('status-message');
+        statusMsg.textContent = "Enregistrement...";
+        statusMsg.style.color = 'orange';
+
+        try {
+            const response = await fetch('/api/labels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ timestamp, status })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                statusMsg.textContent = "Label enregistré !";
+                statusMsg.style.color = 'green';
+                // Mettre à jour les données et redessiner le graphique
+                manualLabels.push({ timestamp_iso: timestamp, status: status });
+                manualLabels.sort((a, b) => new Date(a.timestamp_iso) - new Date(b.timestamp_iso));
+                renderChart();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            statusMsg.textContent = `Erreur: ${error.message}`;
+            statusMsg.style.color = 'red';
+        }
+    }
+
+    function handleChartClick(event) {
+        const point = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true)[0];
+        if (!point) return;
+
+        const timestamp = chart.scales.x.getValueForPixel(event.x);
+        const date = new Date(timestamp);
+        const status = confirm(`Ajouter un label à ${date.toLocaleString('fr-FR')} ?\nOK pour 'Ouverte', Annuler pour 'Fermée'.`) ? 'ouverte' : 'fermee';
+        
+        addLabel(date.toISOString(), status);
+    }
+    
+    document.getElementById('add-label-btn').addEventListener('click', () => {
+        const picker = document.getElementById('datetime-picker');
+        const status = document.getElementById('status-select').value;
+        if (picker.value) {
+            // Le datetime-local est en heure locale, on le convertit en ISO UTC string
+            const localDate = new Date(picker.value);
+            addLabel(localDate.toISOString(), status);
+        } else {
+            alert("Veuillez sélectionner une date et une heure.");
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', renderChart);
+</script>
+
+</body>
+</html>

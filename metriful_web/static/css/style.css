@@ -1,0 +1,95 @@
+/* /home/obafgk/SoundProject/metriful_web/static/css/style.css */
+
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;margin:0;padding:20px;background-color:#f8f9fa;color:#212529}
+.header{text-align:center;margin-bottom:1rem}
+.header h1{color:#343a40}
+.main-container{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:25px}
+.card{background:white;padding:25px;border-radius:16px;box-shadow:0 8px 16px rgba(0,0,0,.05)}
+.kpi-grid,.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:20px;text-align:center}
+.kpi h3,.stat-item h3{margin:0;color:#6c757d;font-size:1rem;font-weight:500}
+.kpi p{font-size:2.2em;margin:8px 0 0 0;color:#007bff;font-weight:600}
+.stat-item p{font-size:1.2em;margin:5px 0 0 0;color:#495057;font-weight:500}
+table{width:100%;border-collapse:collapse;margin-top:20px;font-size:.9rem}
+th,td{padding:12px 15px;border-bottom:1px solid #dee2e6;text-align:left;vertical-align:middle}
+th{background-color:#f8f9fa;color:#495057;font-weight:600;text-transform:uppercase;font-size:.8rem}
+.action-btn { cursor: pointer; background-color: #e9ecef; color: #495057; border: none; border-radius: 20px; padding: 5px 12px; font-size: 0.8rem; margin-right: 5px; }
+.spectral-row{display:none}
+.spectral-row.visible{display:table-row}
+.spectral-cell{background-color:#f8f9fa;padding:15px}
+.period-selector{display: flex;justify-content: center;align-items: center;gap: 30px;flex-wrap: wrap;padding: 15px 25px;}
+.date-picker-container {display: flex;align-items: center;gap: 10px;}
+.date-picker-container label {font-size: 0.9rem;color: #495057;}
+#date-picker {padding: 6px 10px;border: 1px solid #ced4da;border-radius: 8px;background-color: #f8f9fa;}
+.period-btn{background-color:#e2e6ea;border:none;color:#495057;padding:8px 16px;margin:0 5px;border-radius:20px;cursor:pointer;transition:background-color .2s,color .2s}
+.period-btn.active{background-color:#007bff;color:white}
+.audio-player-container { margin-top: 10px; }
+.admin-links ul { list-style: none; padding: 0; margin: 0; display: flex; justify-content: center; gap: 20px; }
+.admin-links a { text-decoration: none; color: #007bff; font-weight: 500; }
+
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#loading-message {
+    margin-top: 20px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #343a40;
+    text-align: center;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+body.loading #loading-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+body.loading * {
+    cursor: wait !important;
+}
+
+.chart-title-with-counter {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #495057;
+}
+
+.counter-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: white;
+    background-color: #007bff;
+    border-radius: 12px;
+    margin-left: 10px;
+    vertical-align: middle;
+    transition: background-color 0.3s;
+}

@@ -1,0 +1,38 @@
+# /home/obafgk/SoundProject/config.py
+
+"""
+Fichier de configuration central pour le projet de surveillance Metriful.
+Modifiez les valeurs ici pour ajuster le comportement des scripts sans changer leur code.
+"""
+
+# =======================================================
+# == PARAMÈTRES DE LA BASE DE DONNÉES (utilisés par les deux scripts) ==
+# =======================================================
+DB_CONFIG = {
+    'user': 'metriful_user',
+    'password': 'cscscs', # REMPLACEZ PAR VOTRE VRAI MOT DE PASSE
+    'host': 'localhost',
+    'database': 'metriful_db'
+}
+
+
+# =======================================================
+# == PARAMÈTRES DU LOGGER (studioAI_metriful_logger.py) ==
+# =======================================================
+
+# Seuil de décibels (dBA) pour déclencher une détection d'événement sonore.
+SOUND_THRESHOLD_DBA = 65.0
+
+# Nombre de cycles de 3 secondes consécutifs où le son doit dépasser le seuil
+# pour qu'un événement soit validé et enregistré.
+# Mettre à 1 pour détecter les bruits courts (plus sensible), 2 ou 3 pour les bruits soutenus.
+EVENT_MIN_CYCLES = 1
+
+
+# =======================================================
+# == PARAMÈTRES DE L'APPLICATION WEB (app.py)          ==
+# =======================================================
+
+# Nombre de points de données à utiliser pour calculer la moyenne glissante sur les graphiques.
+# Une valeur plus élevée donne une courbe plus lisse mais avec plus de "retard".
+ROLLING_WINDOW = 1200

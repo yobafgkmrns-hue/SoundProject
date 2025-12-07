@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundProject V2 (Dark)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <!-- Ajout de Wavesurfer.js pour la visualisation audio -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_v2.css') }}">
+</head>
+<body>
+
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p id="loading-message">Chargement des données...</p>
+</div>
+
+<header class="main-header">
+    <a href="/v2" class="logo">
+        <span class="logo-lg"><b>Sound</b>Project</span>
+    </a>
+    <nav class="navbar">
+        <a href="/" class="btn-switch-view"><i class="fa fa-desktop"></i> Vue Classique</a>
+        <span class="navbar-text" id="last-updated">Mise à jour...</span>
+    </nav>
+</header>
+
+<div class="wrapper">
+    <div class="content-wrapper">
+        <section class="content-header">
+            <h1>Tableau de Bord <small>Surveillance Environnementale</small></h1>
+            <div class="controls-bar">
+                <div class="btn-group">
+                    <button class="period-btn" data-period="1h">1H</button>
+                    <button class="period-btn active" data-period="24h">24H</button>
+                    <button class="period-btn" data-period="7d">7J</button>
+                    <button class="period-btn" data-period="30d">30J</button>
+                </div>
+                <div class="date-input-group">
+                    <i class="fa fa-calendar"></i>
+                    <input type="datetime-local" id="date-picker">
+                    <button id="validate-date-btn" class="btn-validate" title="Valider la date"><i class="fa fa-check"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <section class="content">
+            <div class="row" id="kpi-container"></div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Frise Chronologique
+                                <span id="new-event-counter" class="badge bg-blue" style="display: none;">0</span>
+                            </h3>
+                        </div>
+                        <div class="box-body">
+                            <div class="chart-container">
+                                <canvas id="eventsTimelineChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6"><div class="box box-danger"><div class="box-header"><h3 class="box-title">Distribution Événements</h3></div><div class="box-body"><canvas id="eventsChart" height="250"></canvas></div></div></div>
+            </div>
+
+            <h4 class="section-divider">Données Capteurs</h4>
+            <div class="row charts-row">
+                <div class="col-md-6"><div class="box box-info"><div class="box-header"><h3 class="box-title">Température & Humidex</h3></div><div class="box-body"><canvas id="tempChart" height="250"></canvas></div></div></div>
+                <div class="col-md-6"><div class="box box-success"><div class="box-header"><h3 class="box-title">Humidité</h3></div><div class="box-body"><canvas id="humidChart" height="250"></canvas></div></div></div>
+                
+                <div class="col-md-6"><div class="box box-warning"><div class="box-header"><h3 class="box-title">Niveau Sonore</h3></div><div class="box-body"><canvas id="soundChart" height="250"></canvas></div></div></div>
+                <div class="col-md-6"><div class="box"><div class="box-header"><h3 class="box-title">Luminosité</h3></div><div class="box-body"><canvas id="lightChart" height="250"></canvas></div></div></div>
+
+                <div class="col-md-6"><div class="box"><div class="box-header"><h3 class="box-title">Qualité d'Air (AQI)</h3></div><div class="box-body"><canvas id="aqiChart" height="250"></canvas></div></div></div>
+                <div class="col-md-6"><div class="box"><div class="box-header"><h3 class="box-title">CO₂ Équivalent</h3></div><div class="box-body"><canvas id="co2Chart" height="250"></canvas></div></div></div>
+                
+                <div class="col-md-6"><div class="box"><div class="box-header"><h3 class="box-title">Pression Atmosphérique</h3></div><div class="box-body"><canvas id="pressureChart" height="250"></canvas></div></div></div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="box box-warning">
+                        <div class="box-header with-border"><h3 class="box-title">Derniers Événements (24h)</h3></div>
+                        <div class="box-body no-padding">
+                            <table class="table table-striped" id="events-period-table">
+                                <thead><tr><th>Heure</th><th>Type</th><th>Durée</th><th>Pic</th><th>Spectre</th><th>Audio</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="box box-danger">
+                        <div class="box-header with-border"><h3 class="box-title">Top 20 Événements (Historique)</h3></div>
+                        <div class="box-body no-padding">
+                            <table class="table table-striped" id="top-events-table">
+                                <thead><tr><th>Heure</th><th>Type</th><th>Durée</th><th>Pic</th><th>Spectre</th><th>Audio</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conteneur du lecteur audio -->
+            <div id="global-audio-player-container" class="audio-player-container"></div>
+
+            <div class="footer-links">
+                <a href="/labeling" class="btn btn-app"><i class="fa fa-edit"></i> Calibration</a>
+                <a href="/audio_review" class="btn btn-app"><i class="fa fa-headphones"></i> Revue Audio</a>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    const initialData = { 
+        kpis: {{ kpis | tojson | safe }}, 
+        stats: {{ stats | tojson | safe }}, 
+        history_data: {{ history_data | tojson | safe }}, 
+        events_period: {{ events_period | tojson | safe }}, 
+        top_events: {{ top_events | tojson | safe }},
+        window_status: {{ window_status | tojson | safe }},
+        manual_labels: {{ manual_labels | tojson | safe }}
+    };
+</script>
+
+<script src="{{ url_for('static', filename='js/main_v2.js') }}"></script>
+
+</body>
+</html>

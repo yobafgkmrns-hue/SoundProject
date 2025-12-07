@@ -1,0 +1,19 @@
+# --- Environnement Virtuel Python ---
+# Ne jamais versionner l'environnement virtuel. Il est énorme et spécifique à la machine.
+venv/
+SoundProject2/
+
+# --- Fichiers Cache Python ---
+__pycache__/
+*.pyc
+
+# --- Données Générées ---
+# Le dossier des enregistrements audio ne doit pas être dans le Git.
+# Il peut devenir très volumineux.
+audio_events/
+
+# --- Fichiers de Configuration avec des Secrets ---
+# C'est une bonne pratique de ne pas stocker les mots de passe dans Git.
+# Nous ignorons config.py mais nous allons créer un fichier d'exemple.
+config.py
+metriful_web/config.py

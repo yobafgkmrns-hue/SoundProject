@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revue des Événements Sonores</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background-color: #f8f9fa; color: #212529; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 16px rgba(0,0,0,.05); }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        th, td { padding: 12px; border-bottom: 1px solid #dee2e6; text-align: left; vertical-align: middle; }
+        th { background-color: #f8f9fa; }
+        .action-btn { cursor: pointer; background-color: #e9ecef; border: none; border-radius: 20px; padding: 5px 12px; font-size: 0.8rem; margin-right: 5px; }
+        select, .switch { margin-left: 10px; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #28a745; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        #global-player { position: fixed; bottom: 0; left: 0; width: 100%; background: #f1f1f1; padding: 10px; text-align: center; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); }
+        tr.reviewed-true { background-color: #e9f5e9; } /* Vert pour significatif */
+        tr.reviewed-false { background-color: #fbe9e9; text-decoration: line-through; color: #aaa; } /* Rouge pour non significatif */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Revue des Événements Sonores</h1>
+        <p>Écoutez chaque enregistrement, corrigez son type si nécessaire et indiquez s'il est significatif.</p>
+        <p><a href="/">Retour au tableau de bord</a></p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Date/Heure</th>
+                    <th>Détection Auto</th>
+                    <th>Écouter</th>
+                    <th>Correction Manuelle</th>
+                    <th>Significatif ?</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in sound_events %}
+                <tr id="row-{{ event.id }}" class="{% if event.is_significant is not none %}reviewed-{{ event.is_significant|string|lower }}{% endif %}">
+                    <td>{{ event.start_time_iso }}</td>
+                    <td>{{ event.sound_type }}</td>
+                    <td>
+                        {% if event.audio_filename %}
+                        <button class="action-btn" onclick="playAudio('{{ event.audio_filename }}')">Écouter</button>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <select onchange="updateReview({{ event.id }}, 'type', this.value)">
+                            <option value="">-- Choisir --</option>
+                            {% for type in sound_types %}
+                            <option value="{{ type }}" {% if event.corrected_type == type %}selected{% endif %}>{{ type }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <label class="switch">
+                            <input type="checkbox" onchange="updateReview({{ event.id }}, 'significant', this.checked)" {% if event.is_significant %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="global-player"></div>
+
+<script>
+    // Formater les dates au chargement de la page
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('td:first-child').forEach(el => {
+            const dateStr = el.textContent;
+            if (dateStr) {
+                try {
+                    const dateObj = new Date(dateStr);
+                    el.textContent = new Intl.DateTimeFormat('fr-FR', {
+                        year: '2-digit', month: '2-digit', day: '2-digit',
+                        hour: '2-digit', minute: '2-digit'
+                    }).format(dateObj);
+                } catch(e) { /* ignorer */ }
+            }
+        });
+    });
+
+    let currentAudio = null;
+    function playAudio(filename) {
+        const playerContainer = document.getElementById('global-player');
+        if (currentAudio) {
+            currentAudio.pause();
+        }
+        const audioUrl = `/audio_files/${filename}`;
+        playerContainer.innerHTML = `<audio src="${audioUrl}" controls autoplay></audio>`;
+        currentAudio = playerContainer.querySelector('audio');
+    }
+
+    async function updateReview(eventId, field, value) {
+        const payload = { id: eventId };
+        if (field === 'type') {
+            payload.corrected_type = value;
+        } else if (field === 'significant') {
+            payload.is_significant = value;
+        }
+
+        try {
+            const response = await fetch('/api/review_sound', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+            // Mettre à jour visuellement la ligne
+            const row = document.getElementById(`row-${eventId}`);
+            if (field === 'significant') {
+                row.classList.remove('reviewed-true', 'reviewed-false');
+                row.classList.add(`reviewed-${value}`);
+            }
+        } catch (error) {
+            alert(`Erreur: ${error.message}`);
+        }
+    }
+</script>
+
+</body>
+</html>
