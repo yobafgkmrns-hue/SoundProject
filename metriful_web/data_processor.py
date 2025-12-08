@@ -34,14 +34,68 @@ def calculate_humidex(T, RH):
         else:
             return None
 
+def process_events_dataframe(df, limit):
+    """Calcule le délai entre événements et formate pour l'API"""
+    if df.empty:
+        return []
+
+    # 1. Tri chronologique pour le calcul diff()
+    df = df.sort_values(by='start_time')
+    
+    # 2. Calcul du temps écoulé (Crée un objet Timedelta)
+    df['delta'] = df['start_time'].diff()
+
+    def format_delta(x):
+        if pd.isnull(x): return "-"
+        total_seconds = int(x.total_seconds())
+        if total_seconds < 60: return f"{total_seconds}s"
+        minutes = total_seconds // 60
+        if minutes < 60: return f"{minutes}m"
+        hours = minutes // 60
+        minutes = minutes % 60
+        return f"{hours}h{minutes:02d}"
+
+    # Crée la version TEXTE (lisible par JSON)
+    df['duration_since_prev'] = df['delta'].apply(format_delta)
+
+    # 3. Formatage ISO des dates
+    if 'start_time' in df.columns:
+        df['start_time_iso'] = df['start_time'].apply(lambda x: x.isoformat() + 'Z' if pd.notnull(x) else None)
+
+    # 4. Tri décroissant pour l'affichage
+    df = df.sort_values(by='start_time', ascending=False)
+    
+    # 5. Application de la limite
+    if len(df) > limit:
+        df = df.head(limit)
+        
+    # 6. Gestion filename
+    def get_basename(path):
+        if path and isinstance(path, str) and len(path) > 0:
+            return os.path.basename(path)
+        return None
+    
+    df['audio_filename'] = df['audio_filepath'].apply(get_basename)
+
+    # === CORRECTION CRITIQUE ICI ===
+    # On supprime la colonne 'delta' (Timedelta) car JSON ne sait pas la lire.
+    # On supprime aussi 'start_time' (Datetime) car on utilise 'start_time_iso'
+    cols_to_drop = ['delta']
+    if 'start_time' in df.columns:
+        cols_to_drop.append('start_time')
+        
+    df = df.drop(columns=cols_to_drop, errors='ignore')
+    # ===============================
+
+    return df.to_dict(orient='records')
+
+
 def get_dashboard_data(period_str='24h', ref_date_str=None):
     period_map = { '1h': timedelta(hours=1), '24h': timedelta(hours=24), '7d': timedelta(days=7), '30d': timedelta(days=30) }
     period_delta = period_map.get(period_str, timedelta(hours=24))
     
-    # --- GESTION DES DATES ---
     if ref_date_str and len(ref_date_str) > 10:
         try:
-            # On nettoie la date reçue du JS pour la remettre en UTC naïf pour la DB
             clean_date = ref_date_str.replace('Z', '').split('+')[0]
             reference_date = datetime.fromisoformat(clean_date)
         except ValueError:
@@ -76,7 +130,6 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
     
     if kpis:
         kpis['humidex'] = calculate_humidex(kpis.get('temperature_c'), kpis.get('humidity_pct'))
-        # AJOUT DU 'Z' ICI
         if kpis.get('timestamp'): kpis['timestamp'] = kpis['timestamp'].isoformat() + 'Z'
 
     # Fenêtre
@@ -86,10 +139,9 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
     
     # Labels
     cursor.execute(f"SELECT timestamp, status FROM window_labels WHERE {time_cond} ORDER BY timestamp ASC", params)
-    # AJOUT DU 'Z' ICI
     manual_labels = [{'timestamp_iso': l['timestamp'].isoformat() + 'Z', 'status': l['status']} for l in cursor.fetchall()]
 
-    # Historique
+    # Historique Capteurs
     cursor.execute(f"SELECT * FROM sensor_data WHERE {time_cond} ORDER BY timestamp ASC", params)
     history_data_raw = cursor.fetchall()
     
@@ -115,56 +167,49 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
                  df['humidex_rolling_mean'] = pd.NA
 
         if 'timestamp' in df.columns:
-            # AJOUT DU 'Z' ICI
             df['timestamp'] = df['timestamp'].apply(lambda dt: dt.isoformat() + 'Z' if pd.notnull(dt) else None)
         
         df = df.astype(object).where(pd.notna(df), None)
         history_data = df.to_dict('records')
 
     # Événements Sonores
-    cursor.execute(f"SELECT id, start_time, duration_s, sound_type, peak_spl_dba, audio_filepath FROM sound_events WHERE {sound_cond} ORDER BY id DESC LIMIT 50", params)
-    sound_events_period_raw = cursor.fetchall()
-    sound_events_period = []
+    cursor.execute(f"SELECT id, start_time, duration_s, sound_type, peak_spl_dba, audio_filepath FROM sound_events WHERE {sound_cond} ORDER BY start_time DESC LIMIT 1000", params)
+    events_raw = cursor.fetchall()
     
-    for event_raw in sound_events_period_raw:
-        event = dict(event_raw)
-        if event.get('start_time'): 
-            # AJOUT DU 'Z' ICI
-            event['start_time_iso'] = event['start_time'].isoformat() + 'Z'
-            # Spectre
-            cursor.execute("SELECT freq_band_1, freq_band_2, freq_band_3, freq_band_4, freq_band_5, freq_band_6 FROM sensor_data WHERE timestamp >= %s ORDER BY timestamp ASC LIMIT 1", (event['start_time'],))
-            spectral_data = cursor.fetchone()
-            if spectral_data: 
-                event['spectral_bands'] = [v for v in spectral_data.values() if v is not None]
+    if events_raw:
+        df_ev = pd.DataFrame(events_raw)
+        sound_events_period = process_events_dataframe(df_ev, 1000)
         
-        path = event.get('audio_filepath')
-        if path and isinstance(path, str) and len(path) > 0:
-            event['audio_filename'] = os.path.basename(path)
-        else:
-            event['audio_filename'] = None
-            
-        sound_events_period.append(event)
+        # Ajout manuel des données spectrales
+        for event in sound_events_period:
+            if event.get('start_time_iso'):
+                 ts = datetime.fromisoformat(event['start_time_iso'].replace('Z', ''))
+                 cursor.execute("SELECT freq_band_1, freq_band_2, freq_band_3, freq_band_4, freq_band_5, freq_band_6 FROM sensor_data WHERE timestamp >= %s ORDER BY timestamp ASC LIMIT 1", (ts,))
+                 spectral_data = cursor.fetchone()
+                 if spectral_data: 
+                    event['spectral_bands'] = [v for v in spectral_data.values() if v is not None]
+    else:
+        sound_events_period = []
+
     
     # Top Événements
     cursor.execute("SELECT id, start_time, duration_s, sound_type, peak_spl_dba, audio_filepath FROM sound_events ORDER BY peak_spl_dba DESC, id DESC LIMIT 20")
     top_events_raw = cursor.fetchall()
-    top_events = []
-    for event_raw in top_events_raw:
-        event = dict(event_raw)
-        if event.get('start_time'): 
-            # AJOUT DU 'Z' ICI
-            event['start_time_iso'] = event['start_time'].isoformat() + 'Z'
-            cursor.execute("SELECT freq_band_1, freq_band_2, freq_band_3, freq_band_4, freq_band_5, freq_band_6 FROM sensor_data WHERE timestamp >= %s ORDER BY timestamp ASC LIMIT 1", (event['start_time'],))
-            spectral_data = cursor.fetchone()
-            if spectral_data: 
-                event['spectral_bands'] = [v for v in spectral_data.values() if v is not None]
-        path = event.get('audio_filepath')
-        if path and isinstance(path, str) and len(path) > 0:
-            event['audio_filename'] = os.path.basename(path)
-        else:
-            event['audio_filename'] = None
-        top_events.append(event)
     
+    if top_events_raw:
+        df_top = pd.DataFrame(top_events_raw)
+        top_events = process_events_dataframe(df_top, 20)
+        
+        for event in top_events:
+            if event.get('start_time_iso'):
+                 ts = datetime.fromisoformat(event['start_time_iso'].replace('Z', ''))
+                 cursor.execute("SELECT freq_band_1, freq_band_2, freq_band_3, freq_band_4, freq_band_5, freq_band_6 FROM sensor_data WHERE timestamp >= %s ORDER BY timestamp ASC LIMIT 1", (ts,))
+                 spectral_data = cursor.fetchone()
+                 if spectral_data: 
+                    event['spectral_bands'] = [v for v in spectral_data.values() if v is not None]
+    else:
+        top_events = []
+
     cursor.close()
     conn.close()
     

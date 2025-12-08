@@ -1,174 +1,315 @@
 /* /home/obafgk/SoundProject/metriful_web/static/js/main_v2.js */
 
-let charts = {}; 
+console.log("🚀 Démarrage de main_v2.js (Version Finale Corrigée)...");
+
+let charts = {};
 let currentPeriod = '24h';
 let currentData = {};
-let currentAudioElement = null;
-let newEventCount = 0;
-let wavesurfer = null;
-let refreshInterval = null;
+let wavesurfer = null; // Déclaration globale
 
 const eventStyles = {
-    'Sirène':  { color: '#dd4b39', style: 'triangle', size: 8 },
-    'Moteur':  { color: '#95a5a6', style: 'rect', size: 7 },
-    'Voix':    { color: '#00c0ef', style: 'circle', size: 6 },
+    'Sirène': { color: '#dd4b39', style: 'triangle', size: 8 },
+    'Moteur': { color: '#95a5a6', style: 'rect', size: 7 },
+    'Voix': { color: '#00c0ef', style: 'circle', size: 6 },
     'Musique': { color: '#605ca8', style: 'star', size: 9 },
-    'Autre':   { color: '#ff851b', style: 'rectRot', size: 7 }
+    'Autre': { color: '#ff851b', style: 'rectRot', size: 7 }
 };
 
 Chart.defaults.color = '#b8c7ce';
-Chart.defaults.scale.grid.color = '#3e3e3e'; 
+Chart.defaults.scale.grid.color = '#3e3e3e';
 Chart.defaults.borderColor = '#3e3e3e';
 
+// --- Gestion Date Robuste ---
 function toLocalISOString(date) {
-    const tzoffset = date.getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(date - tzoffset)).toISOString().slice(0, -1);
-    return localISOTime.substring(0, 16);
+    try {
+        const offset = date.getTimezoneOffset() * 60000;
+        return (new Date(date - offset)).toISOString().slice(0, 16);
+    } catch (e) {
+        console.error("Erreur date ISO:", e);
+        return "";
+    }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. Init Date Picker
     const datePicker = document.getElementById('date-picker');
-    datePicker.value = toLocalISOString(new Date());
-
-    // Chargement initial
-    if (typeof initialData !== 'undefined') {
-        currentData = initialData;
-        updateDashboardUI(initialData, currentPeriod);
+    if (datePicker) {
+        datePicker.value = toLocalISOString(new Date());
     }
-    
-    // Mise à jour automatique toutes les 60s si on est sur "aujourd'hui"
-    startRefreshTimer();
 
-    // SSE pour les événements
-    const eventSource = new EventSource("/api/stream_events");
-    eventSource.onmessage = function(event) {
-        if (event.data === "new_event") {
-            console.log("🔔 Notification SSE");
-            if (isViewingToday()) {
-                newEventCount++;
-                updateNewEventCounter();
-                // Délai de sécurité pour la DB
-                setTimeout(() => {
-                    console.log("🔄 Mise à jour suite événement");
-                    fetchDataAndUpdate(currentPeriod, null, false); // false = pas d'overlay
-                }, 2000);
-            }
-        }
-    };
-    eventSource.onerror = function(err) { };
+    // 2. Gestion du chargement des données
+    // On force le chargement via API pour éviter les erreurs de syntaxe HTML
+    console.log("Chargement des données via API...");
+    fetchDataAndUpdate('24h', null, true);
 
+    // 3. Listeners Boutons
     document.querySelectorAll('.period-btn').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             if (document.body.classList.contains('loading')) return;
             currentPeriod = this.dataset.period;
             document.querySelector('.period-btn.active').classList.remove('active');
             this.classList.add('active');
-            // Clic bouton = mise à jour avec la date du picker
             fetchDataAndUpdate(currentPeriod, datePicker.value);
         });
     });
 
     const validateBtn = document.getElementById('validate-date-btn');
-    if(validateBtn) {
-        validateBtn.addEventListener('click', function() {
-            if (document.body.classList.contains('loading')) return;
+    if (validateBtn) {
+        validateBtn.addEventListener('click', function () {
             fetchDataAndUpdate(currentPeriod, datePicker.value);
         });
     }
+
+    // 4. SSE (Temps réel)
+    const eventSource = new EventSource("/api/stream_events");
+    eventSource.onmessage = function (event) {
+        if (event.data === "new_event") {
+            // Petit délai pour laisser le temps à la DB d'écrire
+            setTimeout(() => fetchDataAndUpdate(currentPeriod, null, false), 2000);
+        }
+    };
 });
 
-function isViewingToday() {
-    const datePicker = document.getElementById('date-picker');
-    if (!datePicker.value) return true;
-    const selectedDate = new Date(datePicker.value);
-    const today = new Date();
-    return selectedDate.getDate() === today.getDate() &&
-           selectedDate.getMonth() === today.getMonth() &&
-           selectedDate.getFullYear() === today.getFullYear();
-}
-
-function startRefreshTimer() {
-    if (refreshInterval) clearInterval(refreshInterval);
-    refreshInterval = setInterval(() => {
-        // Si on regarde aujourd'hui, on rafraîchit tout silencieusement chaque minute
-        if (isViewingToday() && !document.body.classList.contains('loading')) {
-            fetchDataAndUpdate(currentPeriod, null, false); // false = pas d'overlay
-        }
-    }, 60000);
-}
-
-function updateNewEventCounter() {
-    const counterElement = document.getElementById('new-event-counter');
-    if (counterElement) {
-        counterElement.textContent = newEventCount;
-        counterElement.style.display = newEventCount > 0 ? 'inline-block' : 'none';
-    }
-}
-
-// showOverlay = true par défaut (chargement manuel), false pour auto-refresh
 async function fetchDataAndUpdate(period, refDateStr = null, showOverlay = true) {
-    if (showOverlay) {
-        const loadingMessage = document.getElementById('loading-message');
-        if (loadingMessage) loadingMessage.textContent = "Chargement...";
-        document.body.classList.add('loading');
-        newEventCount = 0;
-        updateNewEventCounter();
-    }
+    if (showOverlay) document.body.classList.add('loading');
 
-    // Cache buster pour forcer la fraîcheur
+    // Ajout d'un timestamp pour éviter le cache navigateur
     let url = `/api/data?period=${period}&_nocache=${Date.now()}`;
-    
-    // Si on fournit une date explicite (clic bouton valider ou changement période)
-    if (refDateStr && refDateStr.length > 10) {
-        const isoDate = new Date(refDateStr).toISOString();
-        url += `&ref_date=${isoDate}`;
-    }
+    if (refDateStr) url += `&ref_date=${new Date(refDateStr).toISOString()}`;
 
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Réponse NOK');
-        
+        if (!response.ok) throw new Error('Erreur réseau');
         const newData = await response.json();
-        currentData = newData; // On met tout à jour
+        currentData = newData;
         updateDashboardUI(newData, period);
-
     } catch (error) {
         console.error('Erreur Fetch:', error);
-        if (showOverlay) alert("Erreur chargement.");
     } finally {
         if (showOverlay) document.body.classList.remove('loading');
     }
 }
 
 function updateDashboardUI(data, period) {
+    if (!data) return;
+
+    // Mise à jour date de mise à jour
     const lastUpdatedEl = document.getElementById('last-updated');
-    if (lastUpdatedEl && data && data.kpis && data.kpis.timestamp) {
-         lastUpdatedEl.innerHTML = `MàJ : ${formatISODate(data.kpis.timestamp)}`;
+    if (lastUpdatedEl && data.kpis) {
+        lastUpdatedEl.innerHTML = `MàJ : ${formatISODate(data.kpis.timestamp)}`;
     }
-    updateKPIs(data ? data.kpis : null);
-    updateAllCharts(data, period); 
-    updateEventsTable(data ? data.events_period : [], 'events-period-table', true);
-    updateEventsTable(data ? data.top_events : [], 'top-events-table', true);
+
+    updateKPIs(data.kpis);
+    updateAllCharts(data, period);
+    updateEventsTable(data.events_period, 'events-period-table');
+    updateEventsTable(data.top_events, 'top-events-table');
 }
 
-// ... (Les fonctions suivantes sont inchangées par rapport à la dernière version qui fonctionnait)
+// --- GRAPHIQUES CAPTEURS (AVEC FIX SPANGAPS) ---
+function createSensorChart(canvasId, label, dataKey, color, unit, historyData, period, transformFunc = v => v, isLog = false) {
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+        charts[canvasId] = null;
+    }
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
 
-function formatISODate(isoString) {
-    if (!isoString || isoString === '--') return '--';
-    try {
-        const dateObj = new Date(isoString);
-        return new Intl.DateTimeFormat('fr-FR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(dateObj);
-    } catch (e) { return isoString; }
+    if (!historyData || historyData.length === 0) return;
+
+    // Préparation données
+    const chartData = historyData.map(d => {
+        if (!d.timestamp || d[dataKey] == null) return null;
+        let val = transformFunc(d[dataKey]);
+        if (isLog && val <= 0) val = 0.1;
+        return { x: new Date(d.timestamp), y: val };
+    }).filter(p => p !== null);
+
+    const datasets = [{
+        label: label,
+        data: chartData,
+        borderColor: color,
+        backgroundColor: color + '33',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.2,
+        fill: true,
+        spanGaps: true // Permet de relier les points espacés de 1 minute
+    }];
+
+    // Tendance
+    const rollingMeanKey = dataKey + '_rolling_mean';
+    const rollingData = historyData.map(d => {
+        if (!d.timestamp || d[rollingMeanKey] == null) return null;
+        return { x: new Date(d.timestamp), y: transformFunc(d[rollingMeanKey]) };
+    }).filter(p => p !== null);
+
+    if (rollingData.length > 0) {
+        datasets.push({
+            label: 'Tendance',
+            data: rollingData,
+            borderColor: '#fff',
+            borderWidth: 1,
+            pointRadius: 0,
+            tension: 0.4,
+            borderDash: [5, 5],
+            spanGaps: true
+        });
+    }
+
+    let timeUnit = 'hour';
+    let displayFormat = 'HH:mm';
+    if (period === '7d' || period === '30d') {
+        timeUnit = 'day'; displayFormat = 'dd/MM';
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { unit: timeUnit, displayFormats: { hour: 'HH:mm', day: 'dd/MM' } },
+                    grid: { color: '#3e3e3e' },
+                    ticks: { color: '#b8c7ce' }
+                },
+                y: {
+                    type: isLog ? 'logarithmic' : 'linear',
+                    grid: { color: '#3e3e3e' },
+                    ticks: { color: '#b8c7ce' }
+                }
+            },
+            animation: false
+        }
+    });
 }
 
-function formatValue(value, decimals = 0, unit = '') {
-    if (value === null || value === undefined || isNaN(parseFloat(value))) return '--';
-    return `${parseFloat(value).toFixed(decimals)}${unit}`;
+function updateAllCharts(data, period) {
+    const h = data ? data.history_data : [];
+
+    // Liste des graphs capteurs
+    const configs = [
+        { id: 'tempChart', label: 'Température', key: 'temperature_c', color: '#dd4b39', unit: '°C' },
+        { id: 'humidChart', label: 'Humidité', key: 'humidity_pct', color: '#00a65a', unit: '%' },
+        { id: 'pressureChart', label: 'Pression', key: 'pressure_pa', color: '#00c0ef', unit: 'hPa', transform: v => v / 100 },
+        { id: 'lightChart', label: 'Luminosité', key: 'light_lux', color: '#f39c12', unit: 'Lux', isLog: true },
+        { id: 'soundChart', label: 'Niveau Sonore', key: 'sound_spl_dba', color: '#605ca8', unit: 'dBA' },
+        { id: 'aqiChart', label: 'AQI', key: 'aqi', color: '#00a65a', unit: 'AQI' },
+        { id: 'co2Chart', label: 'CO₂', key: 'bsec_co2_ppm', color: '#dd4b39', unit: 'ppm' }
+    ];
+
+    configs.forEach(c => {
+        createSensorChart(c.id, c.label, c.key, c.color, c.unit, h, period, c.transform, c.isLog);
+    });
+
+    // Graphs événements
+    if (charts['eventsChart']) { charts['eventsChart'].destroy(); charts['eventsChart'] = null; }
+    createEventsChart('eventsChart', data ? data.events_period : []);
+
+    if (charts['eventsTimelineChart']) { charts['eventsTimelineChart'].destroy(); charts['eventsTimelineChart'] = null; }
+    createEventsTimelineChart('eventsTimelineChart', data ? data.events_period : [], period);
 }
 
+// --- FRISE CHRONOLOGIQUE ---
+function createEventsTimelineChart(canvasId, eventsData, period) {
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+        charts[canvasId] = null;
+    }
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    // Bornes
+    const now = new Date();
+    const periodHours = { '1h': 1, '24h': 24, '7d': 168, '30d': 720 };
+    const hoursBack = periodHours[period] || 24;
+    const maxTime = now.getTime();
+    const minTime = maxTime - (hoursBack * 60 * 60 * 1000);
+
+    const validEvents = (eventsData || []).filter(e => e.start_time_iso && !isNaN(new Date(e.start_time_iso).getTime()) && new Date(e.start_time_iso).getTime() > 946684800000);
+
+    // Fonction Rayon
+    const MIN_DBA = 40; const MAX_DBA = 100;
+    function calculateRadius(dba) {
+        if (!dba) return 6;
+        const c = Math.max(MIN_DBA, Math.min(MAX_DBA, dba));
+        return 6 + ((c - MIN_DBA) / (MAX_DBA - MIN_DBA)) * 14;
+    }
+
+    const datasets = Object.keys(eventStyles).map(eventType => {
+        const style = eventStyles[eventType];
+        const data = validEvents.filter(e => e.sound_type === eventType).map(e => ({ x: new Date(e.start_time_iso).getTime(), y: eventType, dba: e.peak_spl_dba || 0 }));
+        if (data.length === 0) return null;
+        return {
+            label: eventType,
+            data: data,
+            backgroundColor: style.color,
+            borderColor: '#fff',
+            borderWidth: 1,
+            pointStyle: style.style,
+            radius: data.map(d => calculateRadius(d.dba))
+        };
+    }).filter(ds => ds !== null);
+
+    let timeUnit = 'hour';
+    if (period === '7d' || period === '30d') timeUnit = 'day';
+
+    charts[canvasId] = new Chart(ctx, {
+        type: 'scatter',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: 10 },
+            plugins: { legend: { labels: { color: '#b8c7ce' } } },
+            scales: {
+                x: {
+                    type: 'time',
+                    min: minTime,
+                    max: maxTime,
+                    time: { unit: timeUnit, displayFormats: { hour: 'HH:mm', day: 'dd/MM' } },
+                    grid: { color: '#3e3e3e' },
+                    ticks: { color: '#b8c7ce' }
+                },
+                y: {
+                    type: 'category',
+                    offset: true,
+                    grid: { color: '#3e3e3e' },
+                    ticks: { color: '#b8c7ce' }
+                }
+            },
+            animation: false
+        }
+    });
+}
+
+function createEventsChart(canvasId, eventsData) {
+    const ctx = document.getElementById(canvasId); if (!ctx) return;
+    const labels = Array.from({ length: 24 }, (_, i) => `${i}h`);
+    const data = new Array(24).fill(0);
+    (eventsData || []).forEach(e => { if (e.start_time_iso) data[new Date(e.start_time_iso).getHours()]++; });
+    charts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Evénements', data, backgroundColor: '#dd4b39' }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#3e3e3e' } }
+            }
+        }
+    });
+}
+
+// --- KPI & TABLEAU ---
 function updateKPIs(kpis) {
     const container = document.getElementById('kpi-container');
-    if (!kpis) { container.innerHTML = '<p>Pas de données KPI.</p>'; return; }
+    if (!container || !kpis) return;
     const kpiConfig = [
         { key: 'sound_spl_dba', label: 'Son', icon: 'fa-volume-up', color: 'bg-purple', unit: ' dBA', decimals: 1 },
         { key: 'window', label: 'Fenêtre', icon: 'fa-window-maximize', color: 'bg-aqua', isWindow: true },
@@ -180,152 +321,194 @@ function updateKPIs(kpis) {
         { key: 'humidex', label: 'Humidex', icon: 'fa-tint', color: 'bg-yellow', unit: '', decimals: 1 }
     ];
 
-    let html = '';
-    let windowStatus = 'Inconnu';
-    let windowColor = 'bg-aqua';
+    let windowStatus = 'Inconnu'; let windowColor = 'bg-aqua';
     if (currentData && currentData.window_status) {
         const s = currentData.window_status.status;
         windowStatus = s.charAt(0).toUpperCase() + s.slice(1);
         windowColor = (s === 'ouverte') ? 'bg-red' : 'bg-green';
     }
 
-    kpiConfig.forEach(conf => {
-        html += `<div class="col-md-6 col-sm-6 col-xs-12">`;
-        let val = '--'; let colorClass = conf.color;
-        if (conf.isWindow) { val = windowStatus; colorClass = windowColor; } else { val = formatValue(kpis[conf.key], conf.decimals, conf.unit); }
-        html += `<div class="info-box"><span class="info-box-icon ${colorClass}"><i class="fa ${conf.icon}"></i></span><div class="info-box-content"><span class="info-box-text">${conf.label}</span><span class="info-box-number">${val}</span></div></div></div>`;
-    });
-    container.innerHTML = html;
+    container.innerHTML = kpiConfig.map(conf => {
+        let val = '--'; let color = conf.color;
+        if (conf.isWindow) { val = windowStatus; color = windowColor; }
+        else { val = formatValue(kpis[conf.key], conf.decimals, conf.unit); }
+        return `<div class="col-md-3 col-sm-6 col-xs-12"><div class="info-box"><span class="info-box-icon ${color}"><i class="fa ${conf.icon}"></i></span><div class="info-box-content"><span class="info-box-text">${conf.label}</span><span class="info-box-number">${val}</span></div></div></div>`;
+    }).join('');
 }
 
-function updateAllCharts(data, period) {
-    const historyData = data ? data.history_data : [];
-    const chartConfigs = [ 
-        { id: 'tempChart', label: 'Température', key: 'temperature_c', color: '#dd4b39', unit: '°C' }, 
-        { id: 'humidChart', label: 'Humidité', key: 'humidity_pct', color: '#00a65a', unit: '%' }, 
-        { id: 'pressureChart', label: 'Pression', key: 'pressure_pa', color: '#00c0ef', unit: 'hPa', transform: v => v/100 }, 
-        { id: 'lightChart', label: 'Luminosité', key: 'light_lux', color: '#f39c12', unit: 'Lux', isLog: true }, 
-        { id: 'soundChart', label: 'Niveau Sonore', key: 'sound_spl_dba', color: '#605ca8', unit: 'dBA' }, 
-        { id: 'aqiChart', label: 'AQI', key: 'aqi', color: '#00a65a', unit: 'AQI' }, 
-        { id: 'co2Chart', label: 'CO₂', key: 'bsec_co2_ppm', color: '#dd4b39', unit: 'ppm' } 
-    ];
+function updateEventsTable(events, tableId) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!tbody) return;
 
-    chartConfigs.forEach(config => {
-        if (charts[config.id]) charts[config.id].destroy();
-        if (historyData && historyData.length > 0 && historyData.some(d => d[config.key] !== null)) {
-            createSensorChart(config.id, config.label, config.key, config.color, config.unit, historyData, period, config.transform, config.isLog);
-        }
-    });
-    
-    if (charts['eventsChart']) charts['eventsChart'].destroy();
-    createEventsChart('eventsChart', data ? data.events_period : []);
-    if (charts['eventsTimelineChart']) charts['eventsTimelineChart'].destroy();
-    createEventsTimelineChart('eventsTimelineChart', data ? data.events_period : [], period);
-}
-
-function createSensorChart(canvasId, label, dataKey, color, unit, historyData, period, transformFunc = v => v, isLog = false) {
-    const ctx = document.getElementById(canvasId).getContext('2d');
-    const chartData = historyData.map(d => {
-        let val = d[dataKey] !== null ? transformFunc(d[dataKey]) : null;
-        if (isLog && val !== null && val <= 0) val = 0.1;
-        return { x: new Date(d.timestamp), y: val };
-    });
-    const datasets = [{ label: label, data: chartData, borderColor: color, backgroundColor: color + '33', borderWidth: 2, pointRadius: 0, tension: 0.1, fill: true }];
-    const rollingMeanKey = dataKey + '_rolling_mean';
-    if (historyData.some(d => d[rollingMeanKey] !== null)) {
-        const rollingMeanData = historyData.map(d => {
-            let val = d[rollingMeanKey] !== null ? transformFunc(d[rollingMeanKey]) : null;
-            if (isLog && val !== null && val <= 0) val = 0.1;
-            return { x: new Date(d.timestamp), y: val };
-        });
-        datasets.push({ label: 'Tendance', data: rollingMeanData, borderColor: '#ffffff', borderWidth: 1, pointRadius: 0, tension: 0.4, borderDash: [5, 5] });
+    if (!events || events.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun événement</td></tr>';
+        return;
     }
-    if (canvasId === 'tempChart' && historyData.some(d => d.humidex !== null)) {
-        const humidexData = historyData.map(d => ({ x: new Date(d.timestamp), y: d.humidex }));
-        datasets.push({ label: 'Humidex', data: humidexData, borderColor: '#f39c12', borderWidth: 1.5, pointRadius: 0, tension: 0.1 });
-    }
-    let timeUnit = 'hour'; let timeTooltipFormat = 'dd/MM HH:mm';
-    if (period === '7d' || period === '30d') { timeUnit = 'day'; timeTooltipFormat = 'dd/MM/yyyy'; }
-    charts[canvasId] = new Chart(ctx, {
-        type: 'line', data: { datasets: datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-            plugins: { legend: { display: false }, tooltip: { callbacks: { filter: function(tooltipItem) { return tooltipItem.parsed.y !== null; } } } },
-            scales: {
-                x: { type: 'time', time: { unit: timeUnit, tooltipFormat: timeTooltipFormat, displayFormats: { hour: 'HH:mm', day: 'dd/MM' } }, grid: { color: '#3e3e3e' } },
-                y: { type: isLog ? 'logarithmic' : 'linear', title: { display: true, text: unit }, grid: { color: '#3e3e3e' } }
-            }, animation: false
-        }
+
+    tbody.innerHTML = events.map(e => `
+        <tr>
+            <td>${formatISODate(e.start_time_iso)}</td>
+            <td><span class="badge" style="background-color: ${eventStyles[e.sound_type]?.color || '#777'}">${e.sound_type}</span></td>
+            <td>${e.duration_s !== undefined ? e.duration_s + 's' : '--'}</td>
+            <td>${formatValue(e.peak_spl_dba, 1, ' dBA')}</td>
+            <td style="font-style: italic; color: #888;">${e.duration_since_prev || '-'}</td>
+            <td>${e.spectral_bands ? `<div style="width: 80px; height: 30px;"><canvas id="mini-spec-${tableId}-${e.id}"></canvas></div>` : '--'}</td>
+            <td>${e.audio_filename ? `<button class="action-btn" onclick="playAudio('${e.audio_filename}')"><i class="fa fa-play"></i></button>` : ''}</td>
+        </tr>
+    `).join('');
+
+    // Dessin des mini spectres après insertion HTML
+    events.forEach(e => {
+        if (e.spectral_bands) drawMiniSpectrum(`mini-spec-${tableId}-${e.id}`, e.spectral_bands);
     });
 }
 
-function createEventsTimelineChart(canvasId, eventsData, period) {
-    const ctx = document.getElementById(canvasId); if (!ctx) return;
-    if (!eventsData || eventsData.length === 0) { const c = ctx.getContext('2d'); c.clearRect(0,0,ctx.width,ctx.height); c.font="16px sans-serif"; c.fillStyle="#aaa"; c.textAlign="center"; c.fillText("Aucun événement", ctx.width/2, ctx.height/2); return; }
-    
-    const MIN_DBA = 65; const MAX_DBA = 100; const MIN_RADIUS = 5; const MAX_RADIUS = 15;
-    function calculateRadius(dba) { if (dba===null) return MIN_RADIUS; const c=Math.max(MIN_DBA,Math.min(MAX_DBA,dba)); return MIN_RADIUS+((c-MIN_DBA)/(MAX_DBA-MIN_DBA))*(MAX_RADIUS-MIN_RADIUS); }
-    
-    const datePicker = document.getElementById('date-picker');
-    const endDate = (isViewingToday() && !datePicker.value) ? new Date() : (datePicker.value ? new Date(datePicker.value) : new Date());
-    const periodMap = { '1h': 3600*1000, '24h': 24*3600*1000, '7d': 7*24*3600*1000, '30d': 30*24*3600*1000 };
-    const startDate = new Date(endDate.getTime() - (periodMap[period] || 24*3600*1000));
-    let timeUnit = 'hour'; if (period === '7d' || period === '30d') { timeUnit = 'day'; }
+// --- UTILITAIRES ---
+function formatISODate(isoString) {
+    try {
+        return new Intl.DateTimeFormat('fr-FR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(isoString));
+    } catch (e) {
+        return '--';
+    }
+}
 
-    const datasets = Object.keys(eventStyles).map(eventType => {
-        const style = eventStyles[eventType];
-        const data = eventsData.filter(e => e.sound_type === eventType).map(e => ({ x: new Date(e.start_time_iso).getTime(), y: e.sound_type, dba: e.peak_spl_dba }));
-        return { label: eventType, data: data, backgroundColor: style.color, pointStyle: style.style, radius: data.map(d => calculateRadius(d.dba)), hoverRadius: data.map(d => calculateRadius(d.dba)+2) };
-    }).filter(ds => ds.data.length > 0);
+function formatValue(value, decimals = 0, unit = '') {
+    if (value === null || value === undefined || isNaN(parseFloat(value))) {
+        return '--';
+    }
+    return parseFloat(value).toFixed(decimals) + unit;
+}
 
-    charts[canvasId] = new Chart(ctx, {
-        type: 'scatter', data: { labels: Object.keys(eventStyles), datasets: datasets },
+function drawMiniSpectrum(id, d) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    new Chart(c, {
+        type: 'bar',
+        data: {
+            labels: [1, 2, 3, 4, 5, 6],
+            datasets: [{ data: d, backgroundColor: '#605ca8' }]
+        },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#fff' } }, tooltip: { callbacks: { label: function (c) { const t = new Date(c.parsed.x).toLocaleTimeString('fr-FR'); return `${c.dataset.label} à ${t} (${c.raw.dba.toFixed(1)} dBA)`; } } } },
-            scales: { x: { type: 'time', min: startDate.getTime(), max: endDate.getTime(), time: { unit: timeUnit, displayFormats: { hour: 'HH:mm', day: 'dd/MM' } }, grid: { color: '#444' } }, y: { type: 'category', offset: true, grid: { color: '#444' } } },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: false, tooltip: false },
+            scales: { x: { display: false }, y: { display: false } },
             animation: false
         }
     });
 }
 
-function createEventsChart(canvasId, eventsData) { 
-    const ctx = document.getElementById(canvasId); if (!ctx) return;
-    const hourCounts = Array(24).fill(0); 
-    if(eventsData) eventsData.forEach(e => { if (e.start_time_iso) hourCounts[new Date(e.start_time_iso).getHours()]++; });
-    const labels = Array.from({ length: 24 }, (_, i) => `${i}h`); 
-    charts[canvasId] = new Chart(ctx, { 
-        type: 'bar', 
-        data: { labels: labels, datasets: [{ label: "Evénements", data: hourCounts, backgroundColor: '#dd4b39' }] }, 
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } 
-    }); 
-}
+function playAudio(f) {
+    const c = document.getElementById('global-audio-player-container');
+    if (!c) return;
 
-function updateEventsTable(events, tableId, showActions) {
-    const tbody = document.querySelector(`#${tableId} tbody`);
-    if (!tbody) return;
-    if (!events || events.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Aucun événement.</td></tr>`; return; }
-    tbody.innerHTML = events.map(event => `<tr><td>${formatISODate(event.start_time_iso)}</td> <td><span class="badge" style="background-color: ${eventStyles[event.sound_type]?.color || '#777'}">${event.sound_type}</span></td> <td>${event.duration_s !== undefined ? event.duration_s + 's' : '--'}</td> <td>${formatValue(event.peak_spl_dba, 1, ' dBA')}</td> <td>${ event.spectral_bands ? `<div class="mini-spectrum-container"><canvas id="mini-spec-${tableId}-${event.id}"></canvas></div>` : '<span class="text-muted">--</span>' }</td><td> ${ event.audio_filename ? `<button class="action-btn" onclick="playAudio('${event.audio_filename}');">▶ Écouter</button>` : '<span class="text-muted" style="font-size:0.8em">Pas d\'audio</span>' }</td></tr>`).join('');
-    events.forEach(event => { if (event.spectral_bands) { drawMiniSpectrum(`mini-spec-${tableId}-${event.id}`, event.spectral_bands); } });
-}
+    // Nettoyage
+    if (wavesurfer) {
+        wavesurfer.destroy();
+        wavesurfer = null;
+    }
 
-function drawMiniSpectrum(canvasId, bands) {
-    const canvas = document.getElementById(canvasId); if (!canvas) return;
-    new Chart(canvas, { type: 'bar', data: { labels: ['63', '160', '400', '1k', '2.5k', '6.25k'], datasets: [{ data: bands, backgroundColor: '#605ca8', borderRadius: 2, barPercentage: 0.9 }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false, beginAtZero: true } }, layout: { padding: 0 } } });
-}
+    // 1. Élément Audio Natif
+    const audioEl = new Audio();
+    audioEl.src = '/audio_files/' + f;
+    audioEl.crossOrigin = "anonymous";
+    audioEl.volume = 0.8;
 
-function playAudio(filename) { 
-    const container = document.getElementById('global-audio-player-container'); if (!container) return; 
-    if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
-    container.innerHTML = `<div class="waveform-wrapper"><div class="waveform-controls"><button id="btn-play-pause" class="btn-play-pause"><i class="fa fa-play"></i></button></div><div class="waveform-visual"><div class="waveform-info">Lecture : ${filename}</div><div id="waveform"></div></div><button class="btn-close-player" onclick="document.getElementById('global-audio-player-container').innerHTML=''; if(wavesurfer) wavesurfer.destroy();"><i class="fa fa-times"></i></button></div>`;
-    try {
-        wavesurfer = WaveSurfer.create({ container: '#waveform', waveColor: '#00c0ef', progressColor: '#fff', cursorColor: '#fff', barWidth: 2, barRadius: 3, cursorWidth: 1, height: 50, barGap: 2, normalize: true });
-        wavesurfer.load('/audio_files/' + filename);
-        const playPauseBtn = document.getElementById('btn-play-pause');
-        playPauseBtn.addEventListener('click', function() { wavesurfer.playPause(); });
-        wavesurfer.on('ready', function() { wavesurfer.play(); });
-        wavesurfer.on('play', function() { playPauseBtn.innerHTML = '<i class="fa fa-pause"></i>'; });
-        wavesurfer.on('pause', function() { playPauseBtn.innerHTML = '<i class="fa fa-play"></i>'; });
-        wavesurfer.on('finish', function() { playPauseBtn.innerHTML = '<i class="fa fa-play"></i>'; });
-    } catch (e) { console.error("Erreur création WaveSurfer", e); }
+    // 2. HTML du lecteur (Styles ajustés : Hauteur et Largeur Volume)
+    c.innerHTML = `
+        <div class="waveform-wrapper" style="display: flex; align-items: center; gap: 20px; background: #2d2d2d; padding: 15px; border-top: 4px solid #00c0ef; box-shadow: 0 -5px 15px rgba(0,0,0,0.5);">
+            
+            <!-- Bouton Play (Plus gros) -->
+            <div class="waveform-controls">
+                <button id="pp_btn" class="btn-play-pause" style="width: 60px; height: 60px; font-size: 24px; border-radius: 50%; background: #00c0ef; border: none; color: white; cursor: pointer;">
+                    <i class="fa fa-play"></i>
+                </button>
+            </div>
+            
+            <!-- Visuel Waveform -->
+            <div class="waveform-visual" style="flex-grow: 1;">
+                <div id="wf"></div>
+            </div>
+
+            <!-- Contrôle Volume (Plus large) -->
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                <i id="vol_icon" class="fa fa-volume-up" style="color: #b8c7ce; cursor: pointer; font-size: 18px;"></i>
+                <!-- accent-color colorie le slider en bleu -->
+                <input type="range" id="vol_slider" min="0" max="1" step="0.05" value="0.8" style="width: 150px; cursor: pointer; accent-color: #00c0ef;">
+            </div>
+
+            <!-- Bouton Fermer -->
+            <button class="btn-close-player" id="close_btn" style="background: none; border: none; color: #777; font-size: 24px; cursor: pointer; margin-left: 10px;">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>`;
+
+    // 3. Init WaveSurfer (Hauteur augmentée ici)
+    wavesurfer = WaveSurfer.create({
+        container: '#wf',
+        media: audioEl,
+        waveColor: '#00c0ef',
+        progressColor: '#ffffff',
+        height: 100, // <--- Hauteur doublée (était 50)
+        normalize: true,
+        cursorWidth: 2,
+        barWidth: 3, // Barres un peu plus épaisses
+        barGap: 2,
+        barRadius: 3
+    });
+
+    // --- Événements ---
+
+    wavesurfer.on('ready', () => {
+        wavesurfer.play();
+        document.getElementById('pp_btn').innerHTML = '<i class="fa fa-pause"></i>';
+    });
+    wavesurfer.on('finish', () => {
+        document.getElementById('pp_btn').innerHTML = '<i class="fa fa-play"></i>';
+    });
+
+    document.getElementById('pp_btn').onclick = () => {
+        wavesurfer.playPause();
+        const icon = wavesurfer.isPlaying() ? 'fa-pause' : 'fa-play';
+        document.getElementById('pp_btn').innerHTML = `<i class="fa ${icon}"></i>`;
+    };
+
+    // --- Volume ---
+    const volSlider = document.getElementById('vol_slider');
+    const volIcon = document.getElementById('vol_icon');
+    let lastVolume = 0.8;
+
+    volSlider.oninput = function () {
+        const val = parseFloat(this.value);
+        audioEl.volume = val;
+        updateVolIcon(val);
+        if (val > 0) lastVolume = val;
+    };
+
+    volIcon.onclick = function () {
+        if (audioEl.volume > 0) {
+            audioEl.volume = 0;
+            volSlider.value = 0;
+            updateVolIcon(0);
+        } else {
+            audioEl.volume = lastVolume;
+            volSlider.value = lastVolume;
+            updateVolIcon(lastVolume);
+        }
+    };
+
+    function updateVolIcon(val) {
+        if (val === 0) volIcon.className = 'fa fa-volume-off';
+        else if (val < 0.5) volIcon.className = 'fa fa-volume-down';
+        else volIcon.className = 'fa fa-volume-up';
+    }
+
+    // Fermeture
+    document.getElementById('close_btn').onclick = () => {
+        if (wavesurfer) {
+            wavesurfer.destroy();
+            wavesurfer = null;
+        }
+        c.innerHTML = '';
+    };
 }

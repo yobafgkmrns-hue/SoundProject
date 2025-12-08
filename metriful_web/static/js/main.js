@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
     eventSource.onmessage = function (event) {
         if (event.data === "new_event") {
             console.log("Notification de nouvel événement reçue !");
-            
+
             newEventCount++;
             updateNewEventCounter();
 
@@ -89,13 +89,7 @@ function updateNewEventCounter() {
 }
 
 async function fetchPartialDataAndUpdate() {
-    // === MODIFICATION MAJEURE ICI ===
-    // On force l'URL en mode "Temps Réel".
-    // On NE LIT PAS le date-picker ici, pour laisser le serveur utiliser datetime.now()
-    // On garde le _nocache pour éviter que le navigateur ne serve une vieille réponse.
     let url = `/api/data?period=${currentPeriod}&_nocache=${Date.now()}`;
-    
-    // NOTE : J'ai supprimé le bloc 'if (datePicker.value) { ... }' qui causait le bug.
 
     try {
         const response = await fetch(url);
@@ -103,8 +97,7 @@ async function fetchPartialDataAndUpdate() {
         const newData = await response.json();
 
         console.log(`Données reçues. Nombre d'événements : ${newData.events_period.length}`);
-        
-        // Vérification simple dans la console pour voir si le dernier événement est récent
+
         if (newData.events_period.length > 0) {
             console.log("Dernier événement reçu :", newData.events_period[0].start_time_iso);
         }
@@ -218,13 +211,28 @@ function updateStats(stats) {
     container.innerHTML = `<div class="stat-item"><h3>Temp. Moy.</h3><p>${formatValue(stats.temperature_c.mean, 1, '°C')}</p></div> <div class="stat-item"><h3>Temp. Max</h3><p>${formatValue(stats.temperature_c.max, 1, '°C')}</p></div> <div class="stat-item"><h3>Humid. Moy.</h3><p>${formatValue(stats.humidity_pct.mean, 0, '%')}</p></div> <div class="stat-item"><h3>Bruit Moy.</h3><p>${formatValue(stats.sound_spl_dba.mean, 0, ' dBA')}</p></div> <div class="stat-item"><h3>Écart Bruit</h3><p>${formatValue(stats.sound_spl_dba.std_dev, 1, ' dBA')}</p></div> <div class="stat-item"><h3>AQI Moy.</h3><p>${formatValue(stats.aqi.mean, 0, '')}</p></div>`;
 }
 
+// === MODIFICATION ICI POUR LE DÉLAI ===
 function updateEventsTable(events, tableId, showActions) {
     const tbody = document.querySelector(`#${tableId} tbody`);
     if (!tbody) return;
     if (!events || events.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${showActions ? 5 : 4}" style="text-align:center;">Aucun événement.</td></tr>`; return;
+        // Ajustement du colspan pour la nouvelle colonne
+        tbody.innerHTML = `<tr><td colspan="${showActions ? 6 : 5}" style="text-align:center;">Aucun événement.</td></tr>`; return;
     }
-    tbody.innerHTML = events.map(event => `<tr><td>${formatISODate(event.start_time_iso)}</td> <td>${event.sound_type ? event.sound_type.charAt(0).toUpperCase() + event.sound_type.slice(1) : 'N/A'}</td> <td>${event.duration_s !== undefined ? event.duration_s + 's' : '--'}</td> <td>${formatValue(event.peak_spl_dba, 1, ' dBA')}</td> ${showActions ? `<td> ${event.spectral_bands ? `<button class="action-btn" onclick="toggleDetails(this, ${event.id}, '${tableId}');">Spectre</button>` : ''} ${event.audio_filename ? `<button class="action-btn" onclick="playAudio('${event.audio_filename}');">Écouter</button>` : ''}</td>` : ''} </tr> ${showActions && event.spectral_bands ? `<tr id="details-${tableId}-${event.id}" class="spectral-row"><td colspan="5" class="spectral-cell"><canvas id="spectralChart-${tableId}-${event.id}" height="80"></canvas></td></tr>` : ''}`).join('');
+    tbody.innerHTML = events.map(event => `
+        <tr>
+            <td>${formatISODate(event.start_time_iso)}</td> 
+            <td>${event.sound_type ? event.sound_type.charAt(0).toUpperCase() + event.sound_type.slice(1) : 'N/A'}</td> 
+            <td>${event.duration_s !== undefined ? event.duration_s + 's' : '--'}</td> 
+            <td>${formatValue(event.peak_spl_dba, 1, ' dBA')}</td>
+            
+            <!-- NOUVELLE COLONNE DÉLAI -->
+            <td style="color: #666; font-style: italic;">${event.duration_since_prev || '-'}</td>
+
+            ${showActions ? `<td> ${event.spectral_bands ? `<button class="action-btn" onclick="toggleDetails(this, ${event.id}, '${tableId}');">Spectre</button>` : ''} ${event.audio_filename ? `<button class="action-btn" onclick="playAudio('${event.audio_filename}');">Écouter</button>` : ''}</td>` : ''} 
+        </tr> 
+        ${showActions && event.spectral_bands ? `<tr id="details-${tableId}-${event.id}" class="spectral-row"><td colspan="6" class="spectral-cell"><canvas id="spectralChart-${tableId}-${event.id}" height="80"></canvas></td></tr>` : ''}
+    `).join('');
 }
 
 function updateAllCharts(data, period) {
@@ -300,11 +308,11 @@ function createEventsTimelineChart(canvasId, eventsData, period) {
         return;
     }
 
-    const MIN_DBA = 65;  
-    const MAX_DBA = 100; 
+    const MIN_DBA = 65;
+    const MAX_DBA = 100;
     const MIN_RADIUS = 5;
     const MAX_RADIUS = 15;
-    
+
     function calculateRadius(dba) {
         if (dba === null || dba === undefined) return MIN_RADIUS;
         const clampedDba = Math.max(MIN_DBA, Math.min(MAX_DBA, dba));
@@ -318,17 +326,17 @@ function createEventsTimelineChart(canvasId, eventsData, period) {
     const startDate = new Date(endDate.getTime() - (periodMap[period] || 24 * 3600 * 1000));
     let timeUnit = 'hour';
     if (period === '7d' || period === '30d') { timeUnit = 'day'; }
-    
+
     const datasets = Object.keys(eventStyles).map(eventType => {
         const style = eventStyles[eventType];
         const filteredEvents = eventsData.filter(e => e.sound_type === eventType);
-        
+
         return {
             label: eventType,
-            data: filteredEvents.map(e => ({ 
-                x: new Date(e.start_time_iso).getTime(), 
+            data: filteredEvents.map(e => ({
+                x: new Date(e.start_time_iso).getTime(),
                 y: e.sound_type,
-                dba: e.peak_spl_dba 
+                dba: e.peak_spl_dba
             })),
             backgroundColor: style.color,
             pointStyle: style.style,

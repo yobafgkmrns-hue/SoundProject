@@ -1,93 +1,135 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analyse Environnementale Avancée</title>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
-<div id="loading-overlay">
-    <div class="spinner"></div>
-    <p id="loading-message">Chargement des données...</p>
-</div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-message">Chargement des données...</p>
+    </div>
 
-<div class="main-container">
+    <div class="main-container">
 
-    <div class="header"><h1>Tableau de Bord Environnemental</h1><p id="last-updated"></p></div>
-    <div class="card"><h2>Données en Temps Réel</h2><div class="kpi-grid" id="kpi-container"></div></div>
-
-    <div class="period-selector card">
-        <div>
-            <button class="period-btn" data-period="1h">1H</button>
-            <button class="period-btn active" data-period="24h">24H</button>
-            <button class="period-btn" data-period="7d">7J</button>
-            <button class="period-btn" data-period="30d">30J</button>
+        <div class="header">
+            <h1>Tableau de Bord Environnemental</h1>
+            <p id="last-updated"></p>
         </div>
-        <div class="date-picker-container">
-            <label for="date-picker">Date de référence :</label>
-            <input type="datetime-local" id="date-picker">
+        <div class="card">
+            <h2>Données en Temps Réel</h2>
+            <div class="kpi-grid" id="kpi-container"></div>
+        </div>
+
+        <div class="period-selector card">
+            <div>
+                <button class="period-btn" data-period="1h">1H</button>
+                <button class="period-btn active" data-period="24h">24H</button>
+                <button class="period-btn" data-period="7d">7J</button>
+                <button class="period-btn" data-period="30d">30J</button>
+            </div>
+            <div class="date-picker-container">
+                <label for="date-picker">Date de référence :</label>
+                <input type="datetime-local" id="date-picker">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 id="stats-title">Statistiques (24 Heures)</h2>
+            <div class="stats-grid" id="stats-container"></div>
+        </div>
+        <h2 id="charts-title">Graphiques (24 Heures)</h2>
+        <div class="card"><canvas id="tempChart"></canvas></div>
+        <div class="card"><canvas id="humidChart"></canvas></div>
+        <div class="card"><canvas id="pressureChart"></canvas></div>
+        <div class="card"><canvas id="lightChart"></canvas></div>
+        <div class="card"><canvas id="soundChart"></canvas></div>
+        <div class="card"><canvas id="eventsChart"></canvas></div>
+        <div class="card"><canvas id="aqiChart"></canvas></div>
+        <div class="card"><canvas id="co2Chart"></canvas></div>
+
+        <div class="card">
+            <h2 class="chart-title-with-counter">
+                Frise Chronologique des Événements
+                <span id="new-event-counter" class="counter-badge" style="display: none;">0</span>
+            </h2>
+            <canvas id="eventsTimelineChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h2 id="events-period-title">Événements Sonores (24 Heures)</h2>
+            <table id="events-period-table">
+                <!-- AJOUT DU HEADER 'Délai' -->
+                <thead>
+                    <tr>
+                        <th>Date/Heure</th>
+                        <th>Type</th>
+                        <th>Durée</th>
+                        <th>Pic</th>
+                        <th>Délai</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Top 20 Événements Sonores (Historique Complet)</h2>
+            <table id="top-events-table">
+                <!-- AJOUT DU HEADER 'Délai' -->
+                <thead>
+                    <tr>
+                        <th>Date/Heure</th>
+                        <th>Type</th>
+                        <th>Durée</th>
+                        <th>Pic (dBA)</th>
+                        <th>Délai</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="global-audio-player-container" class="audio-player-container"
+            style="text-align:center; margin-top:20px;"></div>
+
+        <div class="card admin-links">
+            <h2>Outils de Calibration</h2>
+            <ul>
+                <li><a href="/labeling">Annoter les États de la Fenêtre</a></li>
+                <li><a href="/audio_review">Revoir les Événements Sonores</a></li>
+            </ul>
         </div>
     </div>
 
-    <div class="card">
-        <h2 id="stats-title">Statistiques (24 Heures)</h2>
-        <div class="stats-grid" id="stats-container"></div>
-    </div>
-    <h2 id="charts-title">Graphiques (24 Heures)</h2>
-    <div class="card"><canvas id="tempChart"></canvas></div><div class="card"><canvas id="humidChart"></canvas></div><div class="card"><canvas id="pressureChart"></canvas></div><div class="card"><canvas id="lightChart"></canvas></div><div class="card"><canvas id="soundChart"></canvas></div><div class="card"><canvas id="eventsChart"></canvas></div><div class="card"><canvas id="aqiChart"></canvas></div><div class="card"><canvas id="co2Chart"></canvas></div>
     
-    <div class="card">
-        <h2 class="chart-title-with-counter">
-            Frise Chronologique des Événements
-            <span id="new-event-counter" class="counter-badge" style="display: none;">0</span>
-        </h2>
-        <canvas id="eventsTimelineChart"></canvas>
-    </div>
-
-    <div class="card">
-        <h2 id="events-period-title">Événements Sonores (24 Heures)</h2>
-        <table id="events-period-table">
-            <thead><tr><th>Date/Heure</th><th>Type</th><th>Durée</th><th>Pic</th><th>Actions</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <div class="card">
-        <h2>Top 20 Événements Sonores (Historique Complet)</h2>
-        <table id="top-events-table">
-            <thead><tr><th>Date/Heure</th><th>Type</th><th>Durée</th><th>Pic (dBA)</th><th>Actions</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
-    <div id="global-audio-player-container" class="audio-player-container" style="text-align:center; margin-top:20px;"></div>
-
-    <div class="card admin-links">
-        <h2>Outils de Calibration</h2>
-        <ul>
-            <li><a href="/labeling">Annoter les États de la Fenêtre</a></li>
-            <li><a href="/audio_review">Revoir les Événements Sonores</a></li>
-        </ul>
-    </div>
-</div>
-
+    
 <script>
-    const initialData = { 
-        kpis: {{ kpis | tojson | safe }}, 
-        stats: {{ stats | tojson | safe }}, 
-        history_data: {{ history_data | tojson | safe }}, 
-        events_period: {{ events_period | tojson | safe }}, 
-        top_events: {{ top_events | tojson | safe }},
-        window_status: {{ window_status | tojson | safe }},
-        manual_labels: {{ manual_labels | tojson | safe }}
-    };
-</script>
+        const initialData = {
+            kpis: {{ kpis | tojson | safe }},
+            stats: {{ stats | tojson | safe }},
+            history_data: {{ history_data | tojson | safe }},
+            events_period: {{ events_period | tojson | safe }},
+            top_events: {{ top_events | tojson | safe }},
+            window_status: {{ window_status | tojson | safe }},
+            manual_labels: {{ manual_labels | tojson | safe }}
+        };
+    </script>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  
+
+  
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
 </body>
+
 </html>
