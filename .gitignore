@@ -17,3 +17,8 @@ audio_events/
 # Nous ignorons config.py mais nous allons créer un fichier d'exemple.
 config.py
 metriful_web/config.py
+
+# Fichiers de signal pour la communication temps réel
+# Ne pas les inclure dans le dépôt Git
+new_event.signal
+new_sensor.signal
