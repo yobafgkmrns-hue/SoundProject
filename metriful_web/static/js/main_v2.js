@@ -325,16 +325,67 @@ function createEventsChart(canvasId, eventsData) {
 }
 
 function updateEventsTable(events, tableId) {
-    const tbody = document.querySelector(`#${tableId} tbody`); if (!tbody) return;
-    if (!events || events.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun événement</td></tr>'; return; }
-    let tableHTML = '';
-    if (tableId === 'top-events-table') {
-        tableHTML = events.map(e => `<tr><td>${formatISODate(e.start_time_iso)}</td><td><span class="badge" style="background-color: ${eventStyles[e.sound_type]?.color || '#777'}">${e.sound_type}</span></td><td><strong>${formatValue(e.peak_spl_dba, 1, ' dBA')}</strong></td><td>${e.audio_filename ? `<button class="action-btn" onclick="playAudio('${e.audio_filename}')"><i class="fa fa-play"></i></button>` : ''}</td></tr>`).join('');
-    } else {
-        tableHTML = events.map(e => `<tr><td>${formatISODate(e.start_time_iso)}</td><td><span class="badge" style="background-color: ${eventStyles[e.sound_type]?.color || '#777'}">${e.sound_type}</span></td><td>${e.duration_s !== undefined ? e.duration_s + 's' : '--'}</td><td>${formatValue(e.peak_spl_dba, 1, ' dBA')}</td><td style="font-style: italic; color: #888;">${e.duration_since_prev || '-'}</td><td>${e.spectral_bands ? `<div style="width: 80px; height: 30px;"><canvas id="mini-spec-${tableId}-${e.id}"></canvas></div>` : '--'}</td><td>${e.audio_filename ? `<button class="action-btn" onclick="playAudio('${e.audio_filename}')"><i class="fa fa-play"></i></button>` : ''}</td></tr>`).join('');
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!tbody) return;
+
+    // Gestion cas vide
+    if (!events || events.length === 0) {
+        // Ajustement du colspan selon le tableau
+        const colSpan = (tableId === 'top-events-table') ? 4 : 7;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center">Aucun événement</td></tr>`;
+        return;
     }
+
+    let tableHTML = '';
+
+    if (tableId === 'top-events-table') {
+        // --- TOP 20 (Colonnes simplifiées : Heure, Type, Pic, Audio) ---
+        tableHTML = events.map(e => `
+            <tr>
+                <td>${formatISODate(e.start_time_iso)}</td>
+                <td><span class="badge" style="background-color: ${eventStyles[e.sound_type]?.color || '#777'}">${e.sound_type}</span></td>
+                <td><strong>${formatValue(e.peak_spl_dba, 1, ' dBA')}</strong></td>
+                <td>${e.audio_filename ? `<button class="action-btn" onclick="playAudio('${e.audio_filename}')"><i class="fa fa-play"></i></button>` : ''}</td>
+            </tr>
+        `).join('');
+
+    } else {
+        // --- DERNIERS ÉVÉNEMENTS (Colonnes complètes : Heure, Type, Durée, Pic, Délai, Spectre, Audio) ---
+        tableHTML = events.map(e => `
+            <tr>
+                <td>${formatISODate(e.start_time_iso)}</td>
+                <td><span class="badge" style="background-color: ${eventStyles[e.sound_type]?.color || '#777'}">${e.sound_type}</span></td>
+                <td>${e.duration_s !== undefined ? e.duration_s + 's' : '--'}</td>
+                <td>${formatValue(e.peak_spl_dba, 1, ' dBA')}</td>
+                <td style="font-style: italic; color: #888;">${e.duration_since_prev || '-'}</td>
+                <td>
+                    ${e.spectral_bands ? `<div style="width: 80px; height: 30px;"><canvas id="mini-spec-${tableId}-${e.id}"></canvas></div>` : '--'}
+                </td>
+                <td>
+                     ${e.audio_filename ? `<button class="action-btn" onclick="playAudio('${e.audio_filename}')"><i class="fa fa-play"></i></button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
     tbody.innerHTML = tableHTML;
-    if (tableId === 'events-period-table') { events.forEach(e => { if (e.spectral_bands) drawMiniSpectrum(`mini-spec-${tableId}-${e.id}`, e.spectral_bands); }); }
+
+    // Dessin des mini spectres (uniquement pour le tableau complet)
+    if (tableId === 'events-period-table') {
+        events.forEach(e => {
+            if (e.spectral_bands) {
+                drawMiniSpectrum(`mini-spec-${tableId}-${e.id}`, e.spectral_bands);
+            }
+        });
+    }
+
+    // --- RÉAPPLICATION DU FILTRE ---
+    // Si l'utilisateur a tapé une recherche, on filtre les nouvelles lignes immédiatement
+    const searchInputId = (tableId === 'top-events-table') ? 'search-top' : 'search-events';
+    const searchInput = document.getElementById(searchInputId);
+    if (searchInput && searchInput.value) {
+        filterTable(tableId, searchInput.value);
+    }
 }
 
 function formatISODate(isoString) { try { return new Intl.DateTimeFormat('fr-FR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(isoString)); } catch (e) { return '--'; } }
@@ -342,3 +393,120 @@ function formatValue(v, d = 0, u = '') { return (v != null && !isNaN(v)) ? parse
 function drawMiniSpectrum(id, d) { const c = document.getElementById(id); if (c) new Chart(c, { type: 'bar', data: { labels: [1, 2, 3, 4, 5, 6], datasets: [{ data: d, backgroundColor: '#605ca8' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: false, tooltip: false }, scales: { x: { display: false }, y: { display: false } }, animation: false } }); }
 function playAudio(f) { const c = document.getElementById('global-audio-player-container'); if (!c) return; if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; } const a = new Audio(); a.src = '/audio_files/' + f; a.crossOrigin = "anonymous"; a.volume = 0.8; c.innerHTML = `<div class="waveform-wrapper" style="display:flex;align-items:center;gap:20px;background:#2d2d2d;padding:15px;border-top:4px solid #00c0ef;box-shadow:0 -5px 15px rgba(0,0,0,0.5);"><div class="waveform-controls"><button id="pp_btn" class="btn-play-pause" style="width:60px;height:60px;font-size:24px;border-radius:50%;background:#00c0ef;border:none;color:white;cursor:pointer;"><i class="fa fa-play"></i></button></div><div class="waveform-visual" style="flex-grow:1;"><div id="wf"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:5px;"><i id="vol_icon" class="fa fa-volume-up" style="color:#b8c7ce;cursor:pointer;font-size:18px;"></i><input type="range" id="vol_slider" min="0" max="1" step="0.05" value="0.8" style="width:150px;cursor:pointer;accent-color:#00c0ef;"></div><button class="btn-close-player" id="close_btn" style="background:none;border:none;color:#777;font-size:24px;cursor:pointer;margin-left:10px;"><i class="fa fa-times"></i></button></div>`; wavesurfer = WaveSurfer.create({ container: '#wf', media: a, waveColor: '#00c0ef', progressColor: '#fff', height: 100, normalize: true, cursorWidth: 2, barWidth: 3, barGap: 2, barRadius: 3 }); wavesurfer.on('ready', () => { wavesurfer.play(); document.getElementById('pp_btn').innerHTML = '<i class="fa fa-pause"></i>'; }); wavesurfer.on('finish', () => { document.getElementById('pp_btn').innerHTML = '<i class="fa fa-play"></i>'; }); document.getElementById('pp_btn').onclick = () => { wavesurfer.playPause(); document.getElementById('pp_btn').innerHTML = `<i class="fa ${wavesurfer.isPlaying() ? 'fa-pause' : 'fa-play'}"></i>`; }; const s = document.getElementById('vol_slider'); const v = document.getElementById('vol_icon'); let lv = 0.8; s.oninput = function () { const val = parseFloat(this.value); a.volume = val; uV(val); if (val > 0) lv = val; }; v.onclick = function () { if (a.volume > 0) { a.volume = 0; s.value = 0; uV(0); } else { a.volume = lv; s.value = lv; uV(lv); } }; function uV(val) { v.className = val === 0 ? 'fa fa-volume-off' : (val < 0.5 ? 'fa fa-volume-down' : 'fa fa-volume-up'); } document.getElementById('close_btn').onclick = () => { if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; } c.innerHTML = ''; }; }
 let notifTimeout; function showNotification(message) { const b = document.getElementById('notification-banner'); const t = document.getElementById('notif-text'); if (!b || !t) return; t.textContent = message; b.classList.add('visible'); if (notifTimeout) clearTimeout(notifTimeout); notifTimeout = setTimeout(() => { b.classList.remove('visible'); }, 10000); }
+
+/* --- FONCTIONS INTERACTIVES TABLEAUX (Tri & Recherche) --- */
+
+// 1. Initialisation des écouteurs de recherche
+document.addEventListener('DOMContentLoaded', () => {
+    // Connexion champ recherche -> Tableau Période
+    const searchPeriod = document.getElementById('search-events');
+    if (searchPeriod) {
+        searchPeriod.addEventListener('keyup', () => filterTable('events-period-table', searchPeriod.value));
+    }
+
+    // Connexion champ recherche -> Tableau Top 20
+    const searchTop = document.getElementById('search-top');
+    if (searchTop) {
+        searchTop.addEventListener('keyup', () => filterTable('top-events-table', searchTop.value));
+    }
+});
+
+// 2. Fonction de TRI
+let sortDirection = {}; // Mémorise l'état de tri par colonne
+
+function sortTable(tableId, colIndex) {
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const th = table.querySelectorAll('th')[colIndex];
+    const type = th.getAttribute('data-type');
+
+    // Gestion Ascendant / Descendant
+    const dirKey = `${tableId}-${colIndex}`;
+    const asc = sortDirection[dirKey] === 'asc';
+    sortDirection[dirKey] = asc ? 'desc' : 'asc';
+
+    // Mise à jour visuelle des flèches
+    table.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
+    th.classList.add(sortDirection[dirKey]);
+
+    // Fonction de parsing selon le type de donnée
+    const getVal = (row) => {
+        const cell = row.children[colIndex].innerText.trim();
+        if (type === 'number') return parseFloat(cell.replace(/[^0-9.-]/g, '')) || 0; // "85.4 dBA" -> 85.4
+        if (type === 'duration') return parseFloat(cell.replace('s', '')) || 0;       // "12s" -> 12
+        if (type === 'date') {
+            // "10/12 14:30" -> Timestamp. On triche un peu en ajoutant l'année courante si besoin
+            const parts = cell.split(/[\s/:]/); // Séparateurs
+            if (parts.length >= 4) {
+                // Format approximatif pour le tri
+                return new Date(new Date().getFullYear(), parts[1] - 1, parts[0], parts[2], parts[3]).getTime();
+            }
+            return 0;
+        }
+        return cell.toLowerCase();
+    };
+
+    rows.sort((a, b) => {
+        const valA = getVal(a);
+        const valB = getVal(b);
+
+        if (valA < valB) return asc ? -1 : 1;
+        if (valA > valB) return asc ? 1 : -1;
+        return 0;
+    });
+
+    // Réinjection des lignes triées
+    rows.forEach(row => tbody.appendChild(row));
+};
+
+// 3. Fonction de FILTRE (Recherche Intelligente)
+function filterTable(tableId, query) {
+    const table = document.getElementById(tableId);
+    const rows = table.querySelectorAll('tbody tr');
+    const lowerQuery = query.toLowerCase().trim();
+
+    // Détection d'opérateur numérique (ex: >80, <50, 80-90)
+    let operator = null;
+    let numVal = null;
+    let numVal2 = null; // Pour les plages
+
+    if (lowerQuery.startsWith('>')) {
+        operator = '>'; numVal = parseFloat(lowerQuery.substring(1));
+    } else if (lowerQuery.startsWith('<')) {
+        operator = '<'; numVal = parseFloat(lowerQuery.substring(1));
+    } else if (lowerQuery.includes('-') && !isNaN(parseFloat(lowerQuery))) {
+        // Plage (ex: 70-80)
+        const parts = lowerQuery.split('-');
+        if (parts.length === 2) {
+            operator = 'range';
+            numVal = parseFloat(parts[0]);
+            numVal2 = parseFloat(parts[1]);
+        }
+    }
+
+    rows.forEach(row => {
+        let match = false;
+
+        // Si c'est une recherche numérique (ex: >80), on cherche dans la colonne Pic (et Durée)
+        if (operator && !isNaN(numVal)) {
+            // On cherche tous les nombres dans la ligne
+            const numbersInRow = row.innerText.match(/(\d+(\.\d+)?)/g);
+            if (numbersInRow) {
+                for (let nStr of numbersInRow) {
+                    const n = parseFloat(nStr);
+                    if (operator === '>' && n >= numVal) match = true;
+                    if (operator === '<' && n <= numVal) match = true;
+                    if (operator === 'range' && n >= numVal && n <= numVal2) match = true;
+                }
+            }
+        }
+        // Sinon, recherche texte classique
+        else {
+            if (row.innerText.toLowerCase().includes(lowerQuery)) match = true;
+        }
+
+        // Afficher ou masquer
+        row.style.display = match ? '' : 'none';
+    });
+}

@@ -776,3 +776,115 @@ body.loading #loading-overlay {
         transform: rotate(360deg);
     }
 }
+
+/* --- TABLEAUX INTERACTIFS (Sort & Search) --- */
+
+/* 1. En-tête Fixe (Sticky) */
+.table-responsive {
+    overflow-y: auto;
+    /* La hauteur est déjà définie dans le HTML, on s'assure que le scroll est fluide */
+    scrollbar-width: thin;
+    scrollbar-color: #605ca8 #2d2d2d;
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #2d2d2d;
+    /* Couleur de fond pour cacher le défilement */
+    z-index: 10;
+    border-bottom: 2px solid #605ca8;
+    cursor: pointer;
+    /* Indique qu'on peut cliquer */
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.table thead th:hover {
+    background-color: #3d3d3d;
+}
+
+/* Indicateur de tri */
+.table thead th::after {
+    content: '\f0dc';
+    /* Icône de tri FontAwesome (flèches haut/bas) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    float: right;
+    color: #555;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+.table thead th.asc::after {
+    content: '\f0de';
+    color: #fff;
+}
+
+/* Flèche Haut */
+.table thead th.desc::after {
+    content: '\f0dd';
+    color: #fff;
+}
+
+/* Flèche Bas */
+
+/* 2. Barre de recherche Tableau */
+.table-search-container {
+    padding: 10px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #3e3e3e;
+}
+
+.table-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #1b1b1b;
+    border: 1px solid #3e3e3e;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.table-search-input:focus {
+    outline: none;
+    border-color: #605ca8;
+}
+
+.table-search-input::placeholder {
+    color: #666;
+    font-style: italic;
+}
+
+/* --- TABLEAU (Derniers événements) : Police Agrandie --- */
+
+/* 1. Cellules et En-têtes : Police GRANDE */
+#events-period-table th,
+#events-period-table td {
+    font-size: 18px !important;
+    /* <--- C'est ici qu'on augmente */
+    padding: 8px 10px !important;
+    /* Un peu plus d'espace pour que le texte respire */
+    height: 45px !important;
+    /* Hauteur ajustée pour contenir le texte */
+    vertical-align: middle;
+}
+
+/* 2. En-têtes en gras */
+#events-period-table th {
+    font-weight: 700;
+}
+
+/* 3. Badges (Type) adaptés à la nouvelle taille */
+#events-period-table .badge {
+    font-size: 14px !important;
+    padding: 5px 10px !important;
+}
+
+/* 4. Boutons Play adaptés */
+#events-period-table .action-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 14px !important;
+    line-height: 30px !important;
+}
