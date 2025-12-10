@@ -62,8 +62,6 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
         
     cursor = conn.cursor(dictionary=True)
 
-    # === DÉBUT DE LA NOUVELLE LOGIQUE KPI ===
-    
     # 1. KPI Actuel
     cursor.execute("SELECT * FROM sensor_data ORDER BY id DESC LIMIT 1")
     kpis_now = cursor.fetchone()
@@ -82,7 +80,7 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
         cursor.execute("SELECT * FROM sensor_data WHERE timestamp <= %s ORDER BY timestamp DESC LIMIT 1", (ts,))
         kpis_past[period] = cursor.fetchone()
 
-    # 3. Formatage du nouvel objet kpis
+    # 3. Formatage KPI
     kpis_formatted = {}
     trend_keys = ['temperature_c', 'humidity_pct', 'pressure_pa', 'aqi', 'bsec_co2_ppm', 'light_lux', 'sound_spl_dba']
     
@@ -96,14 +94,10 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
                     delta = current_value - past_data[key]
                     kpis_formatted[key][f'delta_{period}'] = delta
     
-    # Ajout des KPIs spéciaux
     kpis_formatted['humidex'] = {'value': calculate_humidex(kpis_now.get('temperature_c'), kpis_now.get('humidity_pct'))}
     kpis_formatted['timestamp'] = {'value': kpis_now.get('timestamp').isoformat() + 'Z' if kpis_now.get('timestamp') else None}
 
-    # === FIN DE LA NOUVELLE LOGIQUE KPI ===
-
-    # --- Le reste de la fonction reste identique ---
-
+    # 4. Historique Capteurs
     period_delta = timedelta(hours={'1h': 1, '24h': 24, '7d': 168, '30d': 720}.get(period_str, 24))
     reference_date = datetime.fromisoformat(ref_date_str.replace('Z','')) if ref_date_str else datetime.utcnow()
     time_threshold = reference_date - period_delta
@@ -122,24 +116,37 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
     history_data_raw = cursor.fetchall()
     
     stats, history_data = {}, []
+    
+    # --- CALCUL DE LA TENDANCE ---
     if history_data_raw:
         df = pd.DataFrame(history_data_raw)
+        
+        # PARAMÈTRE DE LISSAGE (5 minutes)
+        TREND_WINDOW_SIZE = 20 
+        
         data_cols = ['temperature_c','humidity_pct','pressure_pa','aqi','bsec_co2_ppm','light_lux','sound_spl_dba']
         for col in data_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
                 if not df[col].isnull().all():
-                    if len(df[col].dropna()) >= (config.ROLLING_WINDOW / 2 if config.ROLLING_WINDOW else 1): df[f'{col}_rolling_mean'] = df[col].rolling(window=config.ROLLING_WINDOW, min_periods=1, center=True).mean()
-                    else: df[f'{col}_rolling_mean'] = pd.NA
+                    if len(df[col].dropna()) >= 1: 
+                        df[f'{col}_rolling_mean'] = df[col].rolling(window=TREND_WINDOW_SIZE, min_periods=1, center=True).mean()
+                    else: 
+                        df[f'{col}_rolling_mean'] = pd.NA
                     stats[col] = {'mean':df[col].mean(),'median':df[col].median(),'std_dev':df[col].std(),'min':df[col].min(),'max':df[col].max()}
+        
         if 'temperature_c' in df.columns and 'humidity_pct' in df.columns:
             df['humidex'] = calculate_humidex(df['temperature_c'], df['humidity_pct'])
-            if 'humidex' in df.columns and not df['humidex'].isnull().all() and len(df['humidex'].dropna()) >= (config.ROLLING_WINDOW / 2 if config.ROLLING_WINDOW else 1): df['humidex_rolling_mean'] = df['humidex'].rolling(window=config.ROLLING_WINDOW, min_periods=1, center=True).mean()
-            else: df['humidex_rolling_mean'] = pd.NA
+            if 'humidex' in df.columns and not df['humidex'].isnull().all():
+                 df['humidex_rolling_mean'] = df['humidex'].rolling(window=TREND_WINDOW_SIZE, min_periods=1, center=True).mean()
+            else:
+                 df['humidex_rolling_mean'] = pd.NA
+
         if 'timestamp' in df.columns: df['timestamp'] = df['timestamp'].apply(lambda dt: dt.isoformat() + 'Z' if pd.notnull(dt) else None)
         df = df.astype(object).where(pd.notna(df), None)
         history_data = df.to_dict('records')
 
+    # 5. Événements Sonores
     cursor.execute(f"SELECT id, start_time, duration_s, sound_type, peak_spl_dba, audio_filepath FROM sound_events WHERE {sound_cond} ORDER BY start_time DESC LIMIT 1000", params)
     events_raw = cursor.fetchall()
     if events_raw:
@@ -154,6 +161,7 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
     else:
         sound_events_period = []
 
+    # Top Événements
     cursor.execute("SELECT id, start_time, duration_s, sound_type, peak_spl_dba, audio_filepath FROM sound_events ORDER BY peak_spl_dba DESC, id DESC LIMIT 20")
     top_events_raw = cursor.fetchall()
     top_events = []
@@ -175,12 +183,4 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
     cursor.close()
     conn.close()
     
-    return { 
-        "kpis": kpis_formatted, 
-        "stats": stats, 
-        "history_data": history_data, 
-        "events_period": sound_events_period, 
-        "top_events": top_events, 
-        "window_status": window_status, 
-        "manual_labels": manual_labels 
-    }
+    return { "kpis": kpis_formatted, "stats": stats, "history_data": history_data, "events_period": sound_events_period, "top_events": top_events, "window_status": window_status, "manual_labels": manual_labels }

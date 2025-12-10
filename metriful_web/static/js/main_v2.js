@@ -21,6 +21,10 @@ const randomVehicles = [{ icon: 'fa-truck', color: '#7f8c8d' }, { icon: 'fa-tras
 
 Chart.defaults.color = '#b8c7ce'; Chart.defaults.scale.grid.color = '#3e3e3e'; Chart.defaults.borderColor = '#3e3e3e';
 
+// --- AJOUT ICI ---
+// Augmente la taille de police par défaut de TOUS les graphiques (Axes, Légendes, Tooltips)
+Chart.defaults.font.size = 15; // Était 12 par défaut
+
 function toLocalISOString(date) { try { const offset = date.getTimezoneOffset() * 60000; return (new Date(date - offset)).toISOString().slice(0, 16); } catch (e) { return ""; } }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -33,7 +37,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const autoPlayToggle = document.getElementById('autoplay-toggle');
     if (autoPlayToggle) { autoPlayToggle.addEventListener('change', function () { isAutoPlay = this.checked; }); }
 
-    document.querySelectorAll('.period-btn').forEach(button => { button.addEventListener('click', function () { if (document.body.classList.contains('loading')) return; currentPeriod = this.dataset.period; document.querySelector('.period-btn.active').classList.remove('active'); this.classList.add('active'); fetchDataAndUpdate(currentPeriod, datePicker.value); }); });
+    // 3. Boutons Période
+    document.querySelectorAll('.period-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            // Empêche le double-clic pendant un chargement
+            if (document.body.classList.contains('loading')) return;
+
+            // 1. Gestion visuelle des boutons
+            const currentActive = document.querySelector('.period-btn.active');
+            if (currentActive) {
+                currentActive.classList.remove('active');
+            }
+            this.classList.add('active'); // 'this' est le bouton cliqué
+
+            // 2. Mise à jour de la variable
+            currentPeriod = this.dataset.period;
+
+            // 3. Appel des données
+            // showOverlay = true par défaut, donc le message d'attente DOIT s'afficher
+            fetchDataAndUpdate(currentPeriod, datePicker.value, true);
+        });
+    });
     const validateBtn = document.getElementById('validate-date-btn'); if (validateBtn) validateBtn.addEventListener('click', () => fetchDataAndUpdate(currentPeriod, datePicker.value));
 
     const eventSource = new EventSource("/api/stream_events");
@@ -161,7 +185,22 @@ function createSensorChart(canvasId, label, dataKey, color, unit, historyData, p
     function processDataWithGaps(dataArray, key) { const result = []; let prevTime = null; dataArray.forEach(d => { if (!d.timestamp || d[key] == null) return; const currentTime = new Date(d.timestamp).getTime(); if (prevTime && (currentTime - prevTime > GAP_THRESHOLD_MS)) { result.push({ x: currentTime - 1, y: null }); } let val = transformFunc(d[key]); if (isLog && val <= 0) val = 0.1; result.push({ x: currentTime, y: val }); prevTime = currentTime; }); return result; }
     const chartData = processDataWithGaps(historyData, dataKey);
     const datasets = [{ label: label, data: chartData, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, tension: 0.1, fill: false, spanGaps: false }];
-    const rollingMeanKey = dataKey + '_rolling_mean'; if (historyData[0] && rollingMeanKey in historyData[0]) { const rollingData = processDataWithGaps(historyData, rollingMeanKey); if (rollingData.length > 0) { datasets.push({ label: 'Tendance', data: rollingData, borderColor: '#ffffff', borderWidth: 1.5, pointRadius: 0, tension: 0.4, borderDash: [5, 5], fill: false, spanGaps: false }); } }
+    const rollingMeanKey = dataKey + '_rolling_mean'; if (historyData[0] && rollingMeanKey in historyData[0]) {
+        const rollingData = processDataWithGaps(historyData, rollingMeanKey);
+        if (rollingData.length > 0) {
+            datasets.push({
+                label: 'Tendance',
+                data: rollingData,
+                borderColor: '#ffffff', // Blanc pur
+                borderWidth: 2,         // Assez visible
+                pointRadius: 0,
+                tension: 0.4,
+                borderDash: [],         // <--- TABLEAU VIDE = Ligne continue (pas de pointillés)
+                fill: false,
+                spanGaps: true
+            });
+        }
+    }
     let timeUnit = 'hour'; if (period === '7d' || period === '30d') { timeUnit = 'day'; }
     charts[canvasId] = new Chart(ctx, { type: 'line', data: { datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { type: 'time', time: { unit: timeUnit }, grid: { color: '#3e3e3e' }, ticks: { color: '#b8c7ce' } }, y: { type: isLog ? 'logarithmic' : 'linear', grid: { color: '#3e3e3e' }, ticks: { color: '#b8c7ce' } } }, animation: false } });
 }
