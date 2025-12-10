@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SoundProject V2 (FINAL)</title>
+    <title>SoundProject V2 (Restored)</title>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
@@ -12,30 +12,47 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap"
         rel="stylesheet">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔊</text></svg>">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style_v2.css') }}">
 </head>
 
 <body>
-
-    <!-- LE NOUVEAU BANDEAU -->
-    <div id="notification-banner" class="notification-banner">
-        <i class="fa fa-bell"></i>
-        <span id="notif-text">Nouvel événement sonore détecté !</span>
-    </div>
-
 
     <div id="loading-overlay">
         <div class="spinner"></div>
         <p id="loading-message">Chargement des données...</p>
     </div>
 
+    <div id="notification-banner" class="notification-banner">
+        <i class="fa fa-bell"></i>
+        <span id="notif-text">Nouvel événement sonore détecté !</span>
+    </div>
+
     <header class="main-header">
         <a href="/v2" class="logo">
             <span class="logo-lg"><b>Sound</b>Project</span>
         </a>
+
         <nav class="navbar">
-            <a href="/" class="btn-switch-view"><i class="fa fa-desktop"></i> Vue Classique</a>
-            <span class="navbar-text" id="last-updated">Mise à jour...</span>
+            <!-- 1. L'HEURE (Déplacée ici, à gauche) -->
+            <span class="navbar-text" id="last-updated">En attente...</span>
+
+            <!-- 2. LES BOUTONS (Regroupés à droite) -->
+            <div class="navbar-right-menu" style="display: flex; align-items: center; gap: 20px;">
+
+                <!-- Bouton Auto-Play -->
+                <div class="autoplay-container" style="display: flex; align-items: center;">
+                    <span style="color: #b8c7ce; font-size: 14px; margin-right: 10px;">Auto-Play</span>
+                    <label class="switch">
+                        <input type="checkbox" id="autoplay-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <!-- Bouton Vue Classique -->
+                <a href="/" class="btn-switch-view"><i class="fa fa-desktop"></i> Vue Classique</a>
+            </div>
         </nav>
     </header>
 
@@ -59,18 +76,38 @@
             </section>
 
             <section class="content">
-                <!-- 1. KPIs -->
                 <div class="row" id="kpi-container"></div>
 
-                <!-- 2. Frise Chronologique -->
+                <!-- SCÈNE RUE PARIS -->
                 <div class="row">
-                    <!-- CORRECTION : Utilisation de col-12 au lieu de col-md-12 -->
+                    <div class="col-12">
+                        <div id="animation-stage" class="box"
+                            style="height: 280px; background: #87CEEB; position: relative; overflow: hidden; border-top: 3px solid #605ca8; margin-bottom: 20px; border-radius: 8px;">
+                            <div id="street-scene" style="width: 100%; height: 100%; position: relative;">
+                                <div class="sky-background"></div>
+                                <div class="paris-buildings"></div>
+                                <div class="cobblestone-road"></div>
+                                <div id="vehicle-track"
+                                    style="position: absolute; bottom: 30px; left: 0; right: 0; height: 100px; overflow: visible; z-index: 10;">
+                                </div>
+                            </div>
+                            <div id="noise-scene"
+                                style="display: none; width: 100%; height: 100%; background: #e74c3c; align-items: center; justify-content: center; flex-direction: column; z-index: 100; position: absolute; top:0; left:0;">
+                                <i class="fa fa-bolt fa-beat-fade" style="font-size: 80px; color: #f1c40f;"></i>
+                                <h2
+                                    style="color: white; margin-top: 20px; font-family: 'Courier New', monospace; font-weight: bold;">
+                                    BRUIT DÉTECTÉ</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FRISE -->
+                <div class="row">
                     <div class="col-12">
                         <div class="box box-primary">
                             <div class="box-header with-border">
-                                <h3 class="box-title">Frise Chronologique
-                                    <span id="new-event-counter" class="badge bg-blue" style="display: none;">0</span>
-                                </h3>
+                                <h3 class="box-title">Frise Chronologique</h3>
                             </div>
                             <div class="box-body">
                                 <div class="chart-container" style="position: relative; height: 350px; width: 100%;">
@@ -81,12 +118,11 @@
                     </div>
                 </div>
 
-                <!-- 3. Distribution & Table -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="box box-danger">
                             <div class="box-header with-border">
-                                <h3 class="box-title">Distribution des Types</h3>
+                                <h3 class="box-title">Distribution des Événements</h3>
                             </div>
                             <div class="box-body">
                                 <div class="chart-container" style="position: relative; height: 250px; width: 100%;">
@@ -99,7 +135,7 @@
                     <div class="col-md-6">
                         <div class="box box-warning">
                             <div class="box-header with-border">
-                                <h3 class="box-title">Derniers Événements (Période)</h3>
+                                <h3 class="box-title">Derniers Événements</h3>
                             </div>
                             <div class="box-body no-padding" style="max-height: 270px; overflow-y: auto;">
                                 <table class="table table-striped" id="events-period-table">
@@ -127,7 +163,7 @@
                     <div class="col-md-6">
                         <div class="box box-info">
                             <div class="box-header">
-                                <h3 class="box-title">Température & Humidex</h3>
+                                <h3 class="box-title">Température (°C) & Humidex</h3>
                             </div>
                             <div class="box-body"><canvas id="tempChart" height="250"></canvas></div>
                         </div>
@@ -135,7 +171,7 @@
                     <div class="col-md-6">
                         <div class="box box-success">
                             <div class="box-header">
-                                <h3 class="box-title">Humidité</h3>
+                                <h3 class="box-title">Humidité (%)</h3>
                             </div>
                             <div class="box-body"><canvas id="humidChart" height="250"></canvas></div>
                         </div>
@@ -143,7 +179,7 @@
                     <div class="col-md-6">
                         <div class="box box-warning">
                             <div class="box-header">
-                                <h3 class="box-title">Niveau Sonore</h3>
+                                <h3 class="box-title">Niveau Sonore (dBA)</h3>
                             </div>
                             <div class="box-body"><canvas id="soundChart" height="250"></canvas></div>
                         </div>
@@ -151,7 +187,7 @@
                     <div class="col-md-6">
                         <div class="box">
                             <div class="box-header">
-                                <h3 class="box-title">Luminosité</h3>
+                                <h3 class="box-title">Luminosité (Lux)</h3>
                             </div>
                             <div class="box-body"><canvas id="lightChart" height="250"></canvas></div>
                         </div>
@@ -167,7 +203,7 @@
                     <div class="col-md-6">
                         <div class="box">
                             <div class="box-header">
-                                <h3 class="box-title">CO₂ Équivalent</h3>
+                                <h3 class="box-title">CO₂ Équivalent (ppm)</h3>
                             </div>
                             <div class="box-body"><canvas id="co2Chart" height="250"></canvas></div>
                         </div>
@@ -175,16 +211,14 @@
                     <div class="col-md-6">
                         <div class="box">
                             <div class="box-header">
-                                <h3 class="box-title">Pression Atmosphérique</h3>
+                                <h3 class="box-title">Pression Atmosphérique (hPa)</h3>
                             </div>
                             <div class="box-body"><canvas id="pressureChart" height="250"></canvas></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Nouvelle Ligne pour les tableaux du bas -->
                 <div class="row">
-                    <!-- Colonne de Gauche : Top 20 Événements -->
                     <div class="col-md-6">
                         <div class="box box-danger">
                             <div class="box-header with-border">
@@ -205,11 +239,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Colonne de Droite (vide pour l'instant, vous pouvez y mettre un autre graphique plus tard) -->
-                    <div class="col-md-6">
-                        <!-- Vide pour l'instant -->
-                    </div>
                 </div>
 
                 <div id="global-audio-player-container" class="audio-player-container"></div>
@@ -219,17 +248,7 @@
         </div>
     </div>
 
-    <!-- 
-    NOTE : On a supprimé le bloc <script> initialData ici.
-    Le fichier main_v2.js va automatiquement aller chercher les données via l'API.
-    Cela évite 100% des erreurs de syntaxe Jinja/JS.
--->
-
-    <!-- On passe à v=11 pour forcer le chargement de la version API + SpanGaps -->
-    <script src="{{ url_for('static', filename='js/main_v2.js') }}?v=11"></script>
-
-
-
+    <script src="{{ url_for('static', filename='js/main_v2.js') }}?v=restore"></script>
 </body>
 
 </html>
