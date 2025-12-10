@@ -683,3 +683,190 @@ body.loading #loading-overlay {
 }
 
 /* Vert */
+
+/* --- HEADER --- */
+#last-updated {
+    font-size: 18px !important;
+    /* Plus grand (était ~14px) */
+    font-weight: 600;
+    margin-right: 15px;
+    vertical-align: middle;
+}
+
+/* Chaque ligne de tendance long terme */
+.kpi-long-term-trend {
+    font-size: 20px;
+    /* <--- Augmenté pour la lisibilité */
+    font-weight: 600;
+    /* Un peu moins gras pour ne pas écraser la valeur principale */
+    white-space: nowrap;
+    margin-left: 5px;
+    /* Un peu d'espace entre les éléments */
+}
+
+/* On s'assure que la tendance immédiate (si affichée) a la même taille */
+.kpi-immediate-trend {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* --- ANIMATION VÉHICULES (CORRIGÉE) --- */
+
+
+
+/* L'icône elle-même (l'élément i) subit la transformation miroir */
+.moving-vehicle.fa-flip-horizontal {
+    transform: scaleX(-1);
+    display: inline-block;
+    /* Important pour que le transform fonctionne */
+}
+
+@keyframes drive-linear {
+    0% {
+        left: 105%;
+        /* Départ à droite */
+    }
+
+    100% {
+        left: -150px;
+        /* Arrivée à gauche (hors écran) */
+    }
+}
+
+/* --- DÉCOR PARISIEN (SIMPLIFIÉ ET ROBUSTE) --- */
+
+
+
+
+
+/* Effet Bruit */
+.noise-active {
+    animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+/* --- SCÈNE PARIS ILLUSTRÉ --- */
+
+/* --- SCÈNE PARIS "GRIS/ZINC" --- */
+
+/* 1. Le Ciel (Gris-Bleu parisien) */
+.sky-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Dégradé grisaille lumineuse */
+    background: linear-gradient(to bottom, #bdc3c7 0%, #ecf0f1 100%);
+    z-index: 0;
+}
+
+/* 2. Les Immeubles (Paris Détaillé : Larges, Fenêtres, Commerces) */
+.paris-buildings {
+    position: absolute;
+    bottom: 50px;
+    /* Posés sur le trottoir */
+    left: 0;
+    width: 100%;
+    height: 280px;
+    /* On utilise toute la hauteur disponible */
+    z-index: 1;
+
+    /* 
+       SVG PANORAMIQUE (1000px de large)
+       Contient 4 grands immeubles parisiens distincts avec commerces.
+    */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='280' viewBox='0 0 1000 280'%3E%3C!-- Sol/Trottoir --%3E%3Crect x='0' y='270' width='1000' height='10' fill='%23444'/%3E%3C!-- ================================================================= --%3E%3C!-- BATIMENT 1 : LE GRAND HAUSSMANN (0px - 280px) --%3E%3C!-- Pierre de taille beige --%3E%3Crect x='10' y='80' width='260' height='190' fill='%23e8e4d9' stroke='%23555'/%3E%3C!-- Toit Zinc Gris-Bleu --%3E%3Cpath d='M0 80 L30 30 L250 30 L280 80 Z' fill='%2378909c' stroke='%23333'/%3E%3C!-- Cheminées --%3E%3Crect x='40' y='10' width='15' height='25' fill='%23d35400' stroke='%23333'/%3E%3Crect x='220' y='10' width='15' height='25' fill='%23d35400' stroke='%23333'/%3E%3C!-- Chiens-assis (Mansardes) --%3E%3Crect x='60' y='40' width='20' height='30' fill='%23fff' stroke='%23333'/%3E%3Crect x='130' y='40' width='20' height='30' fill='%23fff' stroke='%23333'/%3E%3Crect x='200' y='40' width='20' height='30' fill='%23fff' stroke='%23333'/%3E%3C!-- Fenêtres Étage 1 --%3E%3Crect x='40' y='100' width='30' height='40' fill='%2334495e' stroke='%23777' stroke-width='2'/%3E%3Crect x='115' y='100' width='30' height='40' fill='%2334495e' stroke='%23777' stroke-width='2'/%3E%3Crect x='190' y='100' width='30' height='40' fill='%2334495e' stroke='%23777' stroke-width='2'/%3E%3C!-- Balcon Filant (Fer forgé) --%3E%3Crect x='35' y='135' width='200' height='5' fill='%23222'/%3E%3C!-- Fenêtres Étage 2 --%3E%3Crect x='40' y='160' width='30' height='40' fill='%2334495e' stroke='%23777' stroke-width='2'/%3E%3Crect x='115' y='160' width='30' height='40' fill='%2334495e' stroke='%23777' stroke-width='2'/%3E%3Crect x='190' y='160' width='30' height='40' fill='%2334495e' stroke='%23777' stroke-width='2'/%3E%3C!-- COMMERCE 1 : BOULANGERIE (Bois Vernis) --%3E%3Crect x='20' y='220' width='240' height='50' fill='%235d4037' stroke='%23222'/%3E%3Crect x='30' y='230' width='60' height='40' fill='%23ffe0b2' opacity='0.5'/%3E%3Crect x='100' y='230' width='40' height='40' fill='%238d6e63'/%3E%3C!-- Porte --%3E%3Crect x='150' y='230' width='100' height='40' fill='%23ffe0b2' opacity='0.5'/%3E%3C!-- Store Banne --%3E%3Cpath d='M20 220 L260 220 L250 235 L30 235 Z' fill='%23f1c40f'/%3E%3C!-- ================================================================= --%3E%3C!-- BATIMENT 2 : BRIQUE PARISIENNE (280px - 500px) --%3E%3Crect x='280' y='90' width='220' height='180' fill='%23bcaaa4' stroke='%23555'/%3E%3C!-- Toit Ardoise --%3E%3Cpath d='M275 90 L300 50 L480 50 L505 90 Z' fill='%2337474f' stroke='%23333'/%3E%3C!-- Fenêtres Étage 1 --%3E%3Crect x='310' y='110' width='25' height='35' fill='%232c3e50' stroke='%23fff'/%3E%3Crect x='375' y='110' width='25' height='35' fill='%232c3e50' stroke='%23fff'/%3E%3Crect x='440' y='110' width='25' height='35' fill='%232c3e50' stroke='%23fff'/%3E%3C!-- Fenêtres Étage 2 --%3E%3Crect x='310' y='160' width='25' height='35' fill='%232c3e50' stroke='%23fff'/%3E%3Crect x='375' y='160' width='25' height='35' fill='%232c3e50' stroke='%23fff'/%3E%3Crect x='440' y='160' width='25' height='35' fill='%232c3e50' stroke='%23fff'/%3E%3C!-- COMMERCE 2 : CAFÉ (Rouge) --%3E%3Crect x='290' y='220' width='200' height='50' fill='%23c0392b' stroke='%23222'/%3E%3Crect x='300' y='225' width='120' height='45' fill='%23ecf0f1' opacity='0.3'/%3E%3Crect x='430' y='225' width='50' height='45' fill='%23333'/%3E%3C!-- Store Rouge --%3E%3Cpath d='M290 220 L490 220 L485 240 L295 240 Z' fill='%23e74c3c'/%3E%3C!-- ================================================================= --%3E%3C!-- BATIMENT 3 : IMMEUBLE DE RAPPORT (500px - 750px) --%3E%3Crect x='500' y='60' width='250' height='210' fill='%23cfd8dc' stroke='%23555'/%3E%3C!-- Toit Zinc --%3E%3Cpath d='M495 60 L520 20 L730 20 L755 60 Z' fill='%2390a4ae' stroke='%23333'/%3E%3C!-- Chiens-assis --%3E%3Crect x='540' y='30' width='20' height='25' fill='%23fff' stroke='%23333'/%3E%3Crect x='615' y='30' width='20' height='25' fill='%23fff' stroke='%23333'/%3E%3Crect x='690' y='30' width='20' height='25' fill='%23fff' stroke='%23333'/%3E%3C!-- Fenêtres Hautes --%3E%3Crect x='530' y='80' width='30' height='40' fill='%232c3e50' stroke='%23777'/%3E%3Crect x='610' y='80' width='30' height='40' fill='%232c3e50' stroke='%23777'/%3E%3Crect x='690' y='80' width='30' height='40' fill='%232c3e50' stroke='%23777'/%3E%3C!-- Balcon --%3E%3Crect x='520' y='115' width='210' height='5' fill='%23222'/%3E%3C!-- Fenêtres Basses --%3E%3Crect x='530' y='140' width='30' height='40' fill='%232c3e50' stroke='%23777'/%3E%3Crect x='610' y='140' width='30' height='40' fill='%232c3e50' stroke='%23777'/%3E%3Crect x='690' y='140' width='30' height='40' fill='%232c3e50' stroke='%23777'/%3E%3C!-- COMMERCE 3 : LIBRAIRIE (Vert bouteille) --%3E%3Crect x='510' y='210' width='230' height='60' fill='%23145a32' stroke='%23222'/%3E%3Crect x='520' y='225' width='60' height='40' fill='%23f1c40f' opacity='0.2'/%3E%3Crect x='590' y='225' width='60' height='40' fill='%23f1c40f' opacity='0.2'/%3E%3Crect x='660' y='225' width='70' height='40' fill='%23f1c40f' opacity='0.2'/%3E%3Ctext x='580' y='220' font-family='serif' font-size='12' fill='%23e5e7e9' font-weight='bold'%3ELIBRAIRIE%3C/text%3E%3C!-- ================================================================= --%3E%3C!-- BATIMENT 4 : ANGLE FAUTEIL (750px - 1000px) --%3E%3Crect x='750' y='85' width='250' height='185' fill='%23d7dbdd' stroke='%23555'/%3E%3C!-- Toit Ardoise --%3E%3Cpath d='M745 85 L765 40 L995 40 L1005 85 Z' fill='%23455a64' stroke='%23333'/%3E%3C!-- Cheminée --%3E%3Crect x='800' y='10' width='20' height='40' fill='%23d35400' stroke='%23333'/%3E%3C!-- Fenêtres --%3E%3Crect x='780' y='110' width='30' height='40' fill='%232c3e50'/%3E%3Crect x='860' y='110' width='30' height='40' fill='%232c3e50'/%3E%3Crect x='940' y='110' width='30' height='40' fill='%232c3e50'/%3E%3Crect x='780' y='170' width='30' height='40' fill='%232c3e50'/%3E%3Crect x='860' y='170' width='30' height='40' fill='%232c3e50'/%3E%3Crect x='940' y='170' width='30' height='40' fill='%232c3e50'/%3E%3C!-- COMMERCE 4 : ANTIQUAIRE (Bleu Nuit) --%3E%3Crect x='760' y='230' width='230' height='40' fill='%231a252f' stroke='%23222'/%3E%3Crect x='770' y='235' width='80' height='30' fill='%23bdc3c7' opacity='0.4'/%3E%3Crect x='890' y='235' width='80' height='30' fill='%23bdc3c7' opacity='0.4'/%3E%3C/svg%3E");
+
+    background-repeat: repeat-x;
+    background-position: bottom left;
+}
+
+/* 3. La Route (Pavés gris foncé) */
+.cobblestone-road {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background-color: #4b4b4b;
+    /* Gris bitume/pavé */
+    z-index: 5;
+
+    /* Motif Pavés discret */
+    background-image:
+        linear-gradient(335deg, rgba(0, 0, 0, 0.2) 23px, transparent 23px),
+        linear-gradient(155deg, rgba(0, 0, 0, 0.2) 23px, transparent 23px),
+        linear-gradient(335deg, rgba(0, 0, 0, 0.2) 23px, transparent 23px),
+        linear-gradient(155deg, rgba(0, 0, 0, 0.2) 23px, transparent 23px);
+    background-size: 58px 58px;
+    background-position: 0px 2px, 4px 35px, 29px 31px, 34px 6px;
+
+    border-top: 6px solid #2d3436;
+    /* Trottoir gris foncé */
+}
+
+/* --- VÉHICULES --- */
+.moving-vehicle {
+    position: absolute;
+    bottom: 15px;
+    /* Ajusté pour être bien sur les pavés */
+    font-size: 60px;
+    /* Plus gros */
+    z-index: 20;
+    left: 100%;
+    animation: drive-linear 20s linear forwards;
+    filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5));
+    /* Ombre portée sur la route */
+}
+
+.moving-vehicle.fa-flip-horizontal {
+    transform: scaleX(-1);
+    display: inline-block;
+}
+
+@keyframes drive-linear {
+    0% {
+        left: 105%;
+    }
+
+    100% {
+        left: -150px;
+    }
+}
+
+/* Animation Bruit */
+.noise-active {
+    animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}

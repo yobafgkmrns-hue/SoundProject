@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SoundProject V2 (FINAL)</title>
 
+    <!-- AJOUT DU FAVICON (Émoji encodé pour éviter le 404) -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔊</text></svg>">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://unpkg.com/wavesurfer.js@7"></script>
@@ -34,8 +38,13 @@
             <span class="logo-lg"><b>Sound</b>Project</span>
         </a>
         <nav class="navbar">
-            <a href="/" class="btn-switch-view"><i class="fa fa-desktop"></i> Vue Classique</a>
-            <span class="navbar-text" id="last-updated">Mise à jour...</span>
+            <a href="/" class="btn-switch-view">...</a>
+
+            <!-- C'est ici que ça s'affiche -->
+            <span class="navbar-text" id="last-updated"
+                style="margin-left: auto; margin-right: 20px; color: #b8c7ce; font-size: 14px;">
+                Chargement...
+            </span>
         </nav>
     </header>
 
@@ -61,6 +70,49 @@
             <section class="content">
                 <!-- 1. KPIs -->
                 <div class="row" id="kpi-container"></div>
+
+
+                <!-- === NOUVEAU : LA RUE ANIMÉE === -->
+                <div class="row">
+                    <div class="col-12">
+                        <!-- Conteneur principal -->
+                        <!-- Conteneur principal SCÈNE -->
+                        <!-- Hauteur augmentée à 280px pour voir les immeubles -->
+                        <div id="animation-stage" class="box"
+                            style="height: 280px; background: #87CEEB; position: relative; overflow: hidden; border-top: 3px solid #605ca8; margin-bottom: 20px; border-radius: 8px;">
+
+                            <!-- SCÈNE 1 : LA RUE PARIS (Visible par défaut) -->
+                            <div id="street-scene" style="width: 100%; height: 100%; position: relative;">
+
+                                <!-- 1. LE CIEL (Avec des nuages en CSS) -->
+                                <div class="sky-background"></div>
+
+                                <!-- 2. LES IMMEUBLES (Paris Style) -->
+                                <div class="paris-buildings"></div>
+
+                                <!-- 3. LA ROUTE (Pavés) -->
+                                <div class="cobblestone-road"></div>
+
+                                <!-- 4. VOITURES (Passent DEVANT les immeubles mais SUR la route) -->
+                                <div id="vehicle-track"
+                                    style="position: absolute; bottom: 30px; left: 0; right: 0; height: 100px; overflow: visible; z-index: 10;">
+                                </div>
+                            </div>
+
+                            <!-- SCÈNE 2 : LE BRUIT (Caché par défaut) -->
+                            <div id="noise-scene"
+                                style="display: none; width: 100%; height: 100%; background: #e74c3c; align-items: center; justify-content: center; flex-direction: column; z-index: 100; position: absolute; top:0; left:0;">
+                                <i class="fa fa-bolt fa-beat-fade" style="font-size: 80px; color: #f1c40f;"></i>
+                                <h2
+                                    style="color: white; margin-top: 20px; font-family: 'Courier New', monospace; font-weight: bold;">
+                                    BRUIT DÉTECTÉ</h2>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <!-- =============================== -->
+
 
                 <!-- 2. Frise Chronologique -->
                 <div class="row">
