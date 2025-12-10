@@ -215,17 +215,108 @@ function updateAllCharts(data, period) {
     createEventsTimelineChart('eventsTimelineChart', data ? data.events_period : [], period);
 }
 
+// --- FRISE CHRONOLOGIQUE ---
 function createEventsTimelineChart(canvasId, eventsData, period) {
     if (charts[canvasId]) { charts[canvasId].destroy(); charts[canvasId] = null; }
-    const ctx = document.getElementById(canvasId); if (!ctx) return;
-    const now = new Date(); const periodHours = { '1h': 1, '24h': 24, '7d': 168, '30d': 720 }; const hoursBack = periodHours[period] || 24; const maxTime = now.getTime() + (hoursBack * 60 * 60 * 1000) * 0.05; const minTime = maxTime - (hoursBack * 60 * 60 * 1000) * 1.05;
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    // Bornes
+    const now = new Date();
+    const periodHours = { '1h': 1, '24h': 24, '7d': 168, '30d': 720 };
+    const hoursBack = periodHours[period] || 24;
+    const maxTime = now.getTime() + (hoursBack * 60 * 60 * 1000) * 0.05;
+    const minTime = maxTime - (hoursBack * 60 * 60 * 1000) * 1.05;
+
     const validEvents = (eventsData || []).filter(e => e.start_time_iso && !isNaN(new Date(e.start_time_iso).getTime()) && new Date(e.start_time_iso).getTime() > 946684800000);
-    const MIN_DBA = 40; const MAX_DBA = 100; function calculateRadius(dba) { if (!dba) return 6; const c = Math.max(MIN_DBA, Math.min(MAX_DBA, dba)); return 6 + ((c - MIN_DBA) / (MAX_DBA - MIN_DBA)) * 14; }
+
+    // --- NOUVELLE FORMULE DE TAILLE ---
+    function getRadius(context) {
+        const dba = context.raw ? context.raw.dba : 0;
+        if (!dba) return 4;
+
+        // Paramètres
+        const minDb = 50;  // En dessous de 50dB, c'est tout petit
+        const maxDb = 90;  // Au dessus de 90dB, c'est géant
+        const minSize = 4;
+        const maxSize = 35; // Augmenté pour bien voir les gros
+
+        // Normalisation entre 0 et 1
+        let ratio = (dba - minDb) / (maxDb - minDb);
+        ratio = Math.max(0, Math.min(1, ratio)); // Borner entre 0 et 1
+
+        // Formule Exponentielle (C'est ça qui change tout !)
+        // ratio^2 permet d'accentuer les différences sur les valeurs hautes
+        return minSize + (Math.pow(ratio, 2) * (maxSize - minSize));
+    }
+
     const datasets = Object.keys(eventStyles).map(eventType => {
-        const style = eventStyles[eventType]; const data = validEvents.filter(e => e.sound_type === eventType).map(e => ({ x: new Date(e.start_time_iso).getTime(), y: eventType, dba: e.peak_spl_dba || 0 })); if (data.length === 0) return null; return { label: eventType, data: data, backgroundColor: style.color, borderColor: '#fff', borderWidth: 1, pointStyle: style.style, radius: data.map(d => calculateRadius(d.dba)) };
+        const style = eventStyles[eventType];
+        const data = validEvents
+            .filter(e => e.sound_type === eventType)
+            .map(e => ({
+                x: new Date(e.start_time_iso).getTime(),
+                y: eventType,
+                dba: e.peak_spl_dba || 0
+            }));
+
+        if (data.length === 0) return null;
+
+        return {
+            label: eventType,
+            data: data,
+            backgroundColor: style.color,
+            borderColor: '#fff',
+            borderWidth: 1,
+            pointStyle: style.style,
+            // On utilise la fonction dynamique ici
+            pointRadius: getRadius,
+            // Au survol, on grossit encore
+            pointHoverRadius: (ctx) => getRadius(ctx) + 5
+        };
     }).filter(ds => ds !== null);
-    let timeUnit = 'hour'; if (period === '7d' || period === '30d') timeUnit = 'day';
-    charts[canvasId] = new Chart(ctx, { type: 'scatter', data: { datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, layout: { padding: 10 }, plugins: { legend: { display: false } }, scales: { x: { type: 'time', min: minTime, max: maxTime, time: { unit: timeUnit, displayFormats: { hour: 'HH:mm', day: 'dd/MM' } }, grid: { color: '#3e3e3e' }, ticks: { color: '#b8c7ce' } }, y: { type: 'category', offset: true, grid: { color: '#3e3e3e' }, ticks: { color: '#b8c7ce' } } }, animation: false } });
+
+    let timeUnit = 'hour';
+    if (period === '7d' || period === '30d') timeUnit = 'day';
+
+    charts[canvasId] = new Chart(ctx, {
+        type: 'scatter',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: 10 },
+            plugins: {
+                legend: { display: false }, // Légende masquée comme demandé
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            // On affiche la valeur précise au survol
+                            const db = Math.round(context.raw.dba * 10) / 10;
+                            return `${context.dataset.label}: ${db} dBA`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    min: minTime,
+                    max: maxTime,
+                    time: { unit: timeUnit, displayFormats: { hour: 'HH:mm', day: 'dd/MM' } },
+                    grid: { color: '#3e3e3e' },
+                    ticks: { color: '#b8c7ce' }
+                },
+                y: {
+                    type: 'category',
+                    offset: true,
+                    grid: { color: '#3e3e3e' },
+                    ticks: { color: '#b8c7ce' }
+                }
+            },
+            animation: false
+        }
+    });
 }
 
 function createEventsChart(canvasId, eventsData) {
