@@ -90,8 +90,22 @@
                         <div id="animation-stage" class="box"
                             style="height: 280px; background: #87CEEB; position: relative; overflow: hidden; border-top: 3px solid #605ca8; margin-bottom: 20px; border-radius: 8px;">
                             <div id="street-scene" style="width: 100%; height: 100%; position: relative;">
-                                <div class="sky-background"></div>
+                                <!-- 1. CIEL -->
+                                <div id="sky-layer" class="sky-background"></div>
+
+                                <!-- 2. ASTRES (Soleil / Lune) -->
+                                <div id="celestial-body" class="sun"></div>
+
+                                <!-- 3. PLUIE / NEIGE (Météo) -->
+                                <div id="weather-layer"></div>
+
+                                <!-- 4. VILLE -->
                                 <div class="paris-buildings"></div>
+
+                                <!-- 6. DÉCORATIONS (Noël, etc.) -->
+                                <div id="seasonal-decor"></div>
+
+                                <!-- 7. ROUTE & VÉHICULES -->
                                 <div class="cobblestone-road"></div>
                                 <div id="vehicle-track"
                                     style="position: absolute; bottom: 30px; left: 0; right: 0; height: 100px; overflow: visible; z-index: 10;">

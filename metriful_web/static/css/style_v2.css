@@ -1,9 +1,14 @@
+/* ========================================================================== */
+/* --- SOUNDPROJECT V2 - FEUILLE DE STYLE PRINCIPALE --- */
+/* ========================================================================== */
+
 :root {
     --bg-body: #1b1b1b;
     --bg-card: #2d2d2d;
     --text-main: #ecf0f1;
     --text-muted: #b8c7ce;
     --border-color: #3e3e3e;
+    --accent-blue: #00c0ef;
 }
 
 body {
@@ -14,8 +19,7 @@ body {
     font-size: 14px;
 }
 
-/* --- SYSTÈME DE GRILLE (MANQUANT) --- */
-
+/* --- SYSTÈME DE GRILLE (GRID SYSTEM) --- */
 .row {
     display: flex;
     flex-wrap: wrap;
@@ -29,20 +33,16 @@ body {
     padding-right: 15px;
     padding-left: 15px;
     box-sizing: border-box;
-    /* Important pour que le padding ne casse pas la largeur */
 }
 
-/* Colonne pleine largeur */
 .col-12 {
     width: 100%;
     flex: 0 0 100%;
     max-width: 100%;
 }
 
-/* Colonne 50% (Desktop uniquement) */
 .col-md-6 {
     width: 100%;
-    /* Par défaut sur mobile : 100% */
 }
 
 @media (min-width: 768px) {
@@ -52,7 +52,6 @@ body {
         max-width: 50%;
     }
 
-    /* Pour les KPIs (si vous avez laissé col-md-3 quelque part) */
     .col-md-3 {
         width: 25%;
         flex: 0 0 25%;
@@ -60,7 +59,7 @@ body {
     }
 }
 
-/* HEADER */
+/* --- HEADER & NAVIGATION --- */
 .main-header {
     background-color: #222d32;
     height: 50px;
@@ -88,6 +87,14 @@ body {
     justify-content: space-between;
 }
 
+#last-updated {
+    font-size: 24px !important;
+    font-weight: 700;
+    color: #fff;
+    margin-left: 20px;
+    line-height: 50px;
+}
+
 .btn-switch-view {
     color: #fff;
     background: #444;
@@ -97,25 +104,77 @@ body {
     font-size: 12px;
 }
 
-#last-updated {
-    font-size: 24px !important;
-    /* Beaucoup plus gros (était 18px) */
-    font-weight: 700;
-    /* Plus gras */
-    color: #fff;
-    /* Blanc pur pour ressortir */
-    margin-left: 20px;
-    /* Espace après le logo SoundProject */
-    line-height: 50px;
-    /* Centrage vertical parfait */
-}
-
 .wrapper {
     margin-top: 50px;
     padding: 20px;
 }
 
-/* BOXES */
+/* --- CONTROLS BAR (Date & Période) --- */
+.controls-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--bg-card);
+    padding: 12px 20px;
+    border-radius: 4px;
+    border-top: 3px solid #605ca8;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 2000;
+}
+
+.btn-group .period-btn {
+    background-color: #444;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.btn-group .period-btn.active {
+    background-color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+    color: #fff !important;
+    box-shadow: 0 0 5px rgba(0, 192, 239, 0.5);
+}
+
+.date-input-group {
+    display: flex;
+    align-items: center;
+    background: #444;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 5px 15px;
+}
+
+.date-input-group i {
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+#date-picker {
+    background: transparent;
+    border: none;
+    color: #fff;
+    outline: none;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.btn-validate {
+    background-color: #00a65a;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    margin-left: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* --- BOITES (CARDS) --- */
 .box {
     position: relative;
     border-radius: 3px;
@@ -159,9 +218,9 @@ body {
 
 .box-title {
     display: inline-block;
-    font-size: 18px;
+    font-size: 22px !important;
     margin: 0;
-    font-weight: 400;
+    font-weight: 600;
 }
 
 .box-body {
@@ -173,7 +232,7 @@ body {
     padding: 0;
 }
 
-/* KPIs STYLES (Alignement Horizontal & Grande Police) */
+/* --- KPIs (Tuiles colorées) --- */
 .info-box {
     display: flex;
     min-height: 90px;
@@ -213,6 +272,7 @@ body {
     color: var(--text-muted);
 }
 
+/* Alignement Valeur + Tendances */
 .kpi-value-container {
     display: flex;
     align-items: baseline;
@@ -241,6 +301,7 @@ body {
     color: #00a65a;
 }
 
+/* Couleurs de fond */
 .bg-aqua {
     background-color: #00c0ef !important;
 }
@@ -261,295 +322,217 @@ body {
     background-color: #605ca8 !important;
 }
 
-/* CONTROLS & NOTIFICATIONS */
-/* --- BARRE DE CONTRÔLE AGRANDIE --- */
-
-.controls-bar {
-    display: inline-flex;
-    align-items: center;
-    gap: 15px;
-    background: var(--bg-card);
-    padding: 12px 20px;
-    border-radius: 4px;
-    border-top: 3px solid #605ca8;
-    margin-bottom: 20px;
-
-    /* --- CORRECTION CLIC --- */
-    position: relative;
-    z-index: 2000;
-    /* Force les boutons au-dessus de tout le reste */
+/* --- TABLEAUX --- */
+.table-responsive {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #605ca8 #2d2d2d;
 }
 
-/* Boutons Période (1H, 24H...) */
-.btn-group .period-btn {
-    background-color: #444;
-    border: 1px solid #555;
-    color: #fff;
-    padding: 8px 16px;
-    /* Plus larges */
-    cursor: pointer;
-    font-size: 16px;
-    /* Police agrandie (était ~12/14px) */
-    font-weight: 600;
-    /* Plus gras */
-}
-
-/* Style du bouton actif (Sélectionné) */
-.btn-group .period-btn.active {
-    background-color: #00c0ef !important;
-    /* Bleu cyan forcé */
-    border-color: #00c0ef !important;
-    color: #fff !important;
-    box-shadow: 0 0 5px rgba(0, 192, 239, 0.5);
-    /* Petit effet de lueur */
-}
-
-/* Champ Date */
-.date-input-group {
-    display: flex;
-    align-items: center;
-    background: #444;
-    border: 1px solid #555;
-    border-radius: 3px;
-    padding: 5px 15px;
-}
-
-.date-input-group i {
-    font-size: 16px;
-    /* Icône calendrier plus grosse */
-    margin-right: 10px;
-}
-
-#date-picker {
-    background: transparent;
-    border: none;
-    color: #fff;
-    outline: none;
-    font-size: 16px;
-    /* Date plus grosse */
-    font-weight: 600;
-    font-family: 'Source Sans Pro', sans-serif;
-}
-
-/* Bouton Valider (Check) */
-.btn-validate {
-    background-color: #00a65a;
-    border: none;
-    color: white;
-    padding: 8px 16px;
-    /* Plus large */
-    margin-left: 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 16px;
-    /* Icône plus grosse */
-}
-
-.notification-banner {
-    position: fixed;
-    top: -100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #f39c12;
-    color: white;
-    padding: 15px 30px;
-    border-radius: 0 0 10px 10px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    z-index: 9999;
-    font-weight: bold;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    transition: top 0.5s ease-in-out;
-}
-
-.notification-banner.visible {
-    top: 0;
-}
-
-.notification-banner .fa {
-    animation: bell-shake 1s cubic-bezier(.36, .07, .19, .97) both infinite;
-}
-
-@keyframes bell-shake {
-    0% {
-        transform: rotate(0);
-    }
-
-    15% {
-        transform: rotate(5deg);
-    }
-
-    30% {
-        transform: rotate(-5deg);
-    }
-
-    45% {
-        transform: rotate(4deg);
-    }
-
-    60% {
-        transform: rotate(-4deg);
-    }
-
-    75% {
-        transform: rotate(2deg);
-    }
-
-    85% {
-        transform: rotate(-2deg);
-    }
-
-    100% {
-        transform: rotate(0);
-    }
-}
-
-/* SWITCH */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 20px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 20px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked+.slider {
-    background-color: #00c0ef;
-}
-
-input:checked+.slider:before {
-    transform: translateX(20px);
-}
-
-/* TABLES */
 .table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.table th,
+.table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #2d2d2d;
+    z-index: 10;
+    border-bottom: 2px solid #605ca8;
+    cursor: pointer;
+    user-select: none;
+    font-size: 16px !important;
+    padding: 12px 10px !important;
+}
+
 .table td {
-    padding: 8px;
     border-top: 1px solid var(--border-color);
     text-align: left;
 }
 
-.badge {
-    padding: 3px 7px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #fff;
-    background-color: #777;
-    border-radius: 10px;
+.table thead th:hover {
+    background-color: #3d3d3d;
 }
 
-.action-btn {
+.table thead th::after {
+    content: '\f0dc';
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    float: right;
+    color: #555;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+.table thead th.asc::after {
+    content: '\f0de';
+    color: #fff;
+}
+
+.table thead th.desc::after {
+    content: '\f0dd';
+    color: #fff;
+}
+
+/* Style Spécifique Tableaux Événements */
+#events-period-table th,
+#events-period-table td,
+#top-events-table th,
+#top-events-table td {
+    font-size: 18px !important;
+    padding: 8px 10px !important;
+    height: 45px !important;
+    vertical-align: middle;
+}
+
+#events-period-table .badge,
+#top-events-table .badge {
+    font-size: 14px !important;
+    padding: 5px 10px !important;
+    border-radius: 10px;
+    color: #fff;
+}
+
+#events-period-table .action-btn,
+#top-events-table .action-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 14px !important;
+    line-height: 30px !important;
+    padding: 0 !important;
     background-color: #3c8dbc;
     border: none;
     color: white;
-    padding: 3px 10px;
     border-radius: 3px;
     cursor: pointer;
 }
 
-.footer-links {
-    text-align: center;
-    margin-top: 30px;
+/* Recherche Tableau */
+.table-search-container {
+    padding: 10px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #3e3e3e;
 }
 
-.btn-app {
-    border: 1px solid #ddd;
-    background-color: #f4f4f4;
-    color: #444;
-    padding: 10px 20px;
-    text-decoration: none;
-    border-radius: 3px;
+.table-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #1b1b1b;
+    border: 1px solid #3e3e3e;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 14px;
 }
 
-/* --- DÉCOR RUE DE PARIS (SVG CORRIGÉ) --- */
-/* --- DÉCOR MINIMALISTE (ÉVOCATION) --- */
+.table-search-input:focus {
+    outline: none;
+    border-color: #605ca8;
+}
 
-/* 1. Le Ciel (Dégradé doux et neutre) */
+/* --- SCÈNE RUE DE PARIS (SILHOUETTE) --- */
 .sky-background {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    /* Un dégradé gris-bleu très léger pour ne pas saturer l'œil */
-    background: linear-gradient(to bottom, #cfd9df 0%, #e2ebf0 100%);
+    background: linear-gradient(to bottom, #a8dadc 0%, #edf6f9 100%);
     z-index: 0;
+    transition: background 2s ease;
 }
 
-/* 2. Les Immeubles (Silhouette / Skyline) */
+.sky-background.night {
+    background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364) !important;
+}
+
 .paris-buildings {
     position: absolute;
     bottom: 40px;
-    /* Posé sur la route */
     left: 0;
     width: 100%;
     height: 100%;
-    /* Prend toute la hauteur pour que la Tour Eiffel rentre */
     z-index: 1;
-
-    /* 
-       SVG SIMPLE : Une silhouette plate.
-       Couleur : Gris foncé bleuté (#34495e) pour contraster avec le ciel.
-    */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='280' viewBox='0 0 1200 280'%3E%3C!-- Tour Eiffel (Loin) --%3E%3Cpath d='M100 240 L130 100 L160 240' fill='%2395a5a6' opacity='0.5'/%3E%3Cpath d='M130 100 L130 40' stroke='%2395a5a6' stroke-width='2' opacity='0.5'/%3E%3C!-- RANGÉE D'IMMEUBLES (Silhouette) --%3E%3Cpath d='M0 240 V 120 L 30 90 L 80 90 L 90 120 L 150 120 L 150 80 L 170 60 L 220 60 L 240 80 L 240 130 L 280 130 L 280 100 L 300 80 L 380 80 L 400 100 L 400 150 L 450 150 L 450 110 L 470 90 L 550 90 L 570 110 L 570 140 L 620 140 L 620 70 L 640 50 L 720 50 L 740 70 L 740 140 L 800 140 L 800 100 L 820 80 L 900 80 L 920 100 L 920 140 L 980 140 L 980 90 L 1000 70 L 1080 70 L 1100 90 L 1100 150 L 1200 150 V 240 Z' fill='%2334495e'/%3E%3C!-- Cheminées (Petits rectangles sur les toits) --%3E%3Crect x='40' y='70' width='10' height='20' fill='%2334495e'/%3E%3Crect x='190' y='40' width='8' height='20' fill='%2334495e'/%3E%3Crect x='330' y='60' width='10' height='20' fill='%2334495e'/%3E%3Crect x='500' y='70' width='10' height='20' fill='%2334495e'/%3E%3Crect x='680' y='30' width='8' height='20' fill='%2334495e'/%3E%3Crect x='850' y='60' width='10' height='20' fill='%2334495e'/%3E%3Crect x='1040' y='50' width='10' height='20' fill='%2334495e'/%3E%3C/svg%3E");
-
+    /* SVG SILHOUETTE */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='280' viewBox='0 0 1200 280'%3E%3Cpath d='M100 240 L130 100 L160 240' fill='%237f8c8d' opacity='0.4'/%3E%3Cpath d='M130 100 L130 40' stroke='%237f8c8d' stroke-width='2' opacity='0.4'/%3E%3Cpath d='M0 240 V 120 L 30 90 L 80 90 L 90 120 L 150 120 L 150 80 L 170 60 L 220 60 L 240 80 L 240 130 L 280 130 L 280 100 L 300 80 L 380 80 L 400 100 L 400 150 L 450 150 L 450 110 L 470 90 L 550 90 L 570 110 L 570 140 L 620 140 L 620 70 L 640 50 L 720 50 L 740 70 L 740 140 L 800 140 L 800 100 L 820 80 L 900 80 L 920 100 L 920 140 L 980 140 L 980 90 L 1000 70 L 1080 70 L 1100 90 L 1100 150 L 1200 150 V 240 Z' fill='%2334495e'/%3E%3Crect x='40' y='70' width='10' height='20' fill='%2334495e'/%3E%3Crect x='190' y='40' width='8' height='20' fill='%2334495e'/%3E%3Crect x='330' y='60' width='10' height='20' fill='%2334495e'/%3E%3Crect x='500' y='70' width='10' height='20' fill='%2334495e'/%3E%3Crect x='680' y='30' width='8' height='20' fill='%2334495e'/%3E%3Crect x='850' y='60' width='10' height='20' fill='%2334495e'/%3E%3Crect x='1040' y='50' width='10' height='20' fill='%2334495e'/%3E%3C/svg%3E");
     background-repeat: repeat-x;
     background-position: bottom left;
     background-size: 1200px 100%;
+    transition: filter 2s ease;
 }
 
-/* 3. La Route (Simple bande sombre) */
+.night-mode .paris-buildings {
+    filter: brightness(0.6);
+}
+
 .cobblestone-road {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
     height: 40px;
-    /* Plus fine */
     background-color: #2c3e50;
-    /* Gris très foncé, uni */
     z-index: 5;
     border-top: 4px solid #95a5a6;
-    /* Trottoir simple */
 }
 
-/* ANIMATION VEHICULES */
+.moon {
+    position: absolute;
+    top: 20px;
+    right: 40px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    box-shadow: -15px 10px 0 0 #f1c40f;
+    opacity: 0.8;
+    z-index: 0;
+}
+
+.rain {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    background: url('data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20width%3D%2220%22%20height%3D%2220%22%3E%3Crect%20x%3D%2210%22%20y%3D%220%22%20width%3D%221%22%20height%3D%225%22%20fill%3D%22rgba(255%2C255%2C255%2C0.3)%22%2F%3E%3C%2Fsvg%3E');
+    animation: rain-fall 0.5s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes rain-fall {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: -20px 20px;
+    }
+}
+
+.christmas-garland {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    z-index: 6;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='50' viewBox='0 0 100 50'%3E%3Cpath d='M0,0 Q50,50 100,0' fill='none' stroke='%232ecc71' stroke-width='2'/%3E%3Ccircle cx='20' cy='20' r='3' fill='red'/%3E%3Ccircle cx='50' cy='35' r='3' fill='gold'/%3E%3Ccircle cx='80' cy='20' r='3' fill='blue'/%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    animation: blink-lights 2s infinite alternate;
+}
+
+@keyframes blink-lights {
+    from {
+        filter: brightness(0.8);
+    }
+
+    to {
+        filter: brightness(1.5) drop-shadow(0 0 5px gold);
+    }
+}
+
+/* --- ANIMATION VEHICULES & BULLES --- */
 .vehicle-wrapper {
     position: absolute;
     bottom: 5px;
@@ -669,66 +652,112 @@ input:checked+.slider:before {
     }
 }
 
-/* --- AUGMENTATION TAILLE POLICES (Partie Basse) --- */
-
-/* 1. Titres des boîtes (ex: "Frise Chronologique", "Température") */
-.box-title {
-    font-size: 22px !important;
-    /* Était ~18px */
-    font-weight: 600;
+/* --- SWITCH AUTO-PLAY --- */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
 }
 
-/* 2. Contenu des tableaux (Derniers événements, Top 20) */
-.table th {
-    font-size: 16px !important;
-    /* En-têtes de tableau */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
-.table td {
-    font-size: 16px !important;
-    /* Cellules de tableau */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
 }
 
-/* 3. Badges dans les tableaux (ex: "Sirène") */
-.badge {
-    font-size: 13px !important;
-    padding: 5px 10px !important;
-    /* Un peu plus d'espace */
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
 }
 
-/* 4. Boutons dans les tableaux (Play) */
-.action-btn {
-    font-size: 14px !important;
-    padding: 4px 12px !important;
+input:checked+.slider {
+    background-color: #00c0ef;
 }
 
-/* --- GRANDES POLICES POUR LES TABLEAUX D'ÉVÉNEMENTS --- */
-
-/* Cible les en-têtes et les cellules des deux tableaux spécifiques */
-#events-period-table th,
-#events-period-table td,
-#top-events-table th,
-#top-events-table td {
-    font-size: 18px !important;
-    /* Plus grand (standard ~14px) */
-    padding: 12px 10px !important;
-    /* Plus d'espace pour aérer */
-    vertical-align: middle;
+input:checked+.slider:before {
+    transform: translateX(20px);
 }
 
-/* Ajuste la taille des badges (ex: "Sirène") pour qu'ils ne fassent pas minuscules */
-#events-period-table .badge,
-#top-events-table .badge {
-    font-size: 14px !important;
-    padding: 6px 12px !important;
+/* --- NOTIFICATIONS --- */
+.notification-banner {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #f39c12;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: top 0.5s ease-in-out;
 }
 
-/* Ajuste la taille des boutons (Play) */
-#events-period-table .action-btn,
-#top-events-table .action-btn {
-    font-size: 16px !important;
-    width: 35px;
-    height: 35px;
+.notification-banner.visible {
+    top: 0;
+}
+
+.notification-banner .fa {
+    animation: bell-shake 1s cubic-bezier(.36, .07, .19, .97) both infinite;
+}
+
+@keyframes bell-shake {
+    0% {
+        transform: rotate(0);
+    }
+
+    15% {
+        transform: rotate(5deg);
+    }
+
+    30% {
+        transform: rotate(-5deg);
+    }
+
+    45% {
+        transform: rotate(4deg);
+    }
+
+    60% {
+        transform: rotate(-4deg);
+    }
+
+    75% {
+        transform: rotate(2deg);
+    }
+
+    85% {
+        transform: rotate(-2deg);
+    }
+
+    100% {
+        transform: rotate(0);
+    }
 }
 
 /* --- OVERLAY DE CHARGEMENT --- */
@@ -739,20 +768,16 @@ input:checked+.slider:before {
     width: 100%;
     height: 100%;
     background-color: rgba(27, 27, 27, 0.85);
-    /* Fond sombre semi-transparent */
     z-index: 9999;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-
-    /* Par défaut caché mais présent */
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
 }
 
-/* Quand le body a la classe 'loading', on affiche l'overlay */
 body.loading #loading-overlay {
     opacity: 1;
     pointer-events: auto;
@@ -777,114 +802,78 @@ body.loading #loading-overlay {
     }
 }
 
-/* --- TABLEAUX INTERACTIFS (Sort & Search) --- */
-
-/* 1. En-tête Fixe (Sticky) */
-.table-responsive {
-    overflow-y: auto;
-    /* La hauteur est déjà définie dans le HTML, on s'assure que le scroll est fluide */
-    scrollbar-width: thin;
-    scrollbar-color: #605ca8 #2d2d2d;
+/* --- LECTEUR AUDIO --- */
+.audio-player-container {
+    margin-bottom: 20px;
 }
 
-.table thead th {
-    position: sticky;
+.footer-links {
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
+}
+
+/* --- DÉCOR NOUVEL AN --- */
+.new-year-decor {
+    position: absolute;
     top: 0;
-    background-color: #2d2d2d;
-    /* Couleur de fond pour cacher le défilement */
-    z-index: 10;
-    border-bottom: 2px solid #605ca8;
-    cursor: pointer;
-    /* Indique qu'on peut cliquer */
-    user-select: none;
-    transition: background-color 0.2s;
-}
-
-.table thead th:hover {
-    background-color: #3d3d3d;
-}
-
-/* Indicateur de tri */
-.table thead th::after {
-    content: '\f0dc';
-    /* Icône de tri FontAwesome (flèches haut/bas) */
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    float: right;
-    color: #555;
-    font-size: 12px;
-    margin-left: 5px;
-}
-
-.table thead th.asc::after {
-    content: '\f0de';
-    color: #fff;
-}
-
-/* Flèche Haut */
-.table thead th.desc::after {
-    content: '\f0dd';
-    color: #fff;
-}
-
-/* Flèche Bas */
-
-/* 2. Barre de recherche Tableau */
-.table-search-container {
-    padding: 10px;
-    background: #2d2d2d;
-    border-bottom: 1px solid #3e3e3e;
-}
-
-.table-search-input {
+    left: 0;
     width: 100%;
-    padding: 8px 12px;
-    background-color: #1b1b1b;
-    border: 1px solid #3e3e3e;
-    color: #fff;
-    border-radius: 4px;
-    font-size: 14px;
+    height: 100%;
+    z-index: 6;
+    /* Motif Feux d'artifice stylisés (Jaune, Rouge, Bleu) */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='150' viewBox='0 0 300 150'%3E%3C!-- Feu 1 (Jaune) --%3E%3Cpath d='M50 50 L50 20 M50 50 L80 50 M50 50 L50 80 M50 50 L20 50 M50 50 L70 30 M50 50 L70 70 M50 50 L30 70 M50 50 L30 30' stroke='%23f1c40f' stroke-width='2' opacity='0.8'/%3E%3C!-- Feu 2 (Rouge) --%3E%3Cpath d='M200 80 L200 60 M200 80 L220 80 M200 80 L200 100 M200 80 L180 80 M200 80 L215 65 M200 80 L215 95 M200 80 L185 95 M200 80 L185 65' stroke='%23e74c3c' stroke-width='2' opacity='0.7'/%3E%3C!-- Feu 3 (Bleu) --%3E%3Cpath d='M120 30 L120 10 M120 30 L140 30 M120 30 L120 50 M120 30 L100 30' stroke='%233498db' stroke-width='2' opacity='0.6'/%3E%3C/svg%3E");
+
+    background-repeat: repeat-x;
+    /* Répète sur la largeur */
+    animation: fireworks-blink 1s infinite alternate;
+    /* Clignotement */
 }
 
-.table-search-input:focus {
-    outline: none;
-    border-color: #605ca8;
+@keyframes fireworks-blink {
+    from {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1.02);
+    }
 }
 
-.table-search-input::placeholder {
-    color: #666;
-    font-style: italic;
-}
+/* --- PHARES DES VÉHICULES (Mode Nuit Uniquement) --- */
 
-/* --- TABLEAU (Derniers événements) : Police Agrandie --- */
+/* On cible le pseudo-élément 'after' du véhicule, 
+   mais SEULEMENT si le parent (#animation-stage) a la classe .night-mode */
+.night-mode .moving-vehicle::after {
+    content: '';
+    position: absolute;
 
-/* 1. Cellules et En-têtes : Police GRANDE */
-#events-period-table th,
-#events-period-table td {
-    font-size: 18px !important;
-    /* <--- C'est ici qu'on augmente */
-    padding: 8px 10px !important;
-    /* Un peu plus d'espace pour que le texte respire */
-    height: 45px !important;
-    /* Hauteur ajustée pour contenir le texte */
-    vertical-align: middle;
-}
+    /* POSITIONNEMENT */
+    /* L'icône étant retournée (miroir), 'left: 100%' correspond à l'avant du véhicule */
+    left: 80%;
+    top: 50%;
 
-/* 2. En-têtes en gras */
-#events-period-table th {
-    font-weight: 700;
-}
+    /* TAILLE DU FAISCEAU */
+    width: 250px;
+    height: 100px;
 
-/* 3. Badges (Type) adaptés à la nouvelle taille */
-#events-period-table .badge {
-    font-size: 14px !important;
-    padding: 5px 10px !important;
-}
+    /* LE DESSIN DE LA LUMIÈRE */
+    /* Un dégradé qui part du jaune vif vers le transparent */
+    background: linear-gradient(to right, rgba(255, 255, 200, 0.9) 0%, rgba(255, 255, 200, 0.1) 40%, transparent 100%);
 
-/* 4. Boutons Play adaptés */
-#events-period-table .action-btn {
-    width: 30px !important;
-    height: 30px !important;
-    font-size: 14px !important;
-    line-height: 30px !important;
+    /* LA FORME DU CÔNE */
+    /* On découpe le rectangle en forme de trapèze/triangle */
+    clip-path: polygon(0 45%, 0 55%, 100% 100%, 100% 0);
+
+    /* AJUSTEMENTS */
+    transform: translateY(-50%);
+    /* Centrage vertical */
+    z-index: -1;
+    /* La lumière part de derrière le pare-choc pour ne pas cacher la voiture */
+    mix-blend-mode: screen;
+    /* Mode de fusion pour un effet lumineux réaliste */
+    filter: blur(2px);
+    /* Léger flou pour adoucir */
 }
