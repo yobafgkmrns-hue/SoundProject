@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
-    <!-- 2. PLUGINS ZOOM (HammerJS + Plugin Zoom) - CORRIGÉS -->
+    <!-- 2. PLUGINS ZOOM (HammerJS + Plugin Zoom) -->
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
@@ -47,9 +47,13 @@
         </a>
 
         <nav class="navbar">
+            <!-- 1. Heure de dernière activité (Gauche) -->
             <span class="navbar-text" id="last-updated">En attente...</span>
 
+            <!-- 2. Boutons de contrôle (Droite) -->
             <div class="navbar-right-menu" style="display: flex; align-items: center; gap: 20px; margin-right: 15px;">
+
+                <!-- Switch Auto-Play -->
                 <div class="autoplay-container" style="display: flex; align-items: center;">
                     <span style="color: #b8c7ce; font-size: 14px; margin-right: 10px;">Auto-Play</span>
                     <label class="switch">
@@ -57,6 +61,8 @@
                         <span class="slider round"></span>
                     </label>
                 </div>
+
+                <!-- Lien Vue Classique -->
                 <a href="/" class="btn-switch-view"><i class="fa fa-desktop"></i> Vue Classique</a>
             </div>
         </nav>
@@ -64,6 +70,7 @@
 
     <div class="wrapper">
         <div class="content-wrapper">
+            <!-- Barre de Contrôle (Période & Date) -->
             <section class="content-header">
                 <h1>Tableau de Bord <small>Surveillance Environnementale</small></h1>
                 <div class="controls-bar">
@@ -82,35 +89,45 @@
             </section>
 
             <section class="content">
+
+                <!-- ========================================= -->
+                <!-- SECTION 1 : EN CE MOMENT                  -->
+                <!-- ========================================= -->
+                <div class="section-header first">
+                    <i class="fa fa-clock"></i> En ce moment
+                </div>
+
+                <!-- 1. KPIs (Injectés par JS, sur 2 colonnes) -->
                 <div class="row" id="kpi-container"></div>
 
-                <!-- Scène Rue de Paris -->
+                <!-- 2. Scène Rue de Paris -->
                 <div class="row">
                     <div class="col-12">
                         <div id="animation-stage" class="box"
                             style="height: 280px; background: #87CEEB; position: relative; overflow: hidden; border-top: 3px solid #605ca8; margin-bottom: 20px; border-radius: 8px;">
-                            <div id="street-scene" style="width: 100%; height: 100%; position: relative;">
-                                <!-- 1. CIEL -->
-                                <div id="sky-layer" class="sky-background"></div>
 
-                                <!-- 2. ASTRES (Soleil / Lune) -->
+                            <div id="street-scene" style="width: 100%; height: 100%; position: relative;">
+                                <!-- Calques de fond -->
+                                <div id="sky-layer" class="sky-background"></div>
                                 <div id="celestial-body" class="sun"></div>
 
-                                <!-- 3. PLUIE / NEIGE (Météo) -->
+                                <!-- Météo -->
                                 <div id="weather-layer"></div>
 
-                                <!-- 4. VILLE -->
+                                <!-- Ville -->
                                 <div class="paris-buildings"></div>
 
-                                <!-- 6. DÉCORATIONS (Noël, etc.) -->
+                                <!-- Décorations (C'est ici que ça manquait !) -->
                                 <div id="seasonal-decor"></div>
 
-                                <!-- 7. ROUTE & VÉHICULES -->
+                                <!-- Route & Véhicules -->
                                 <div class="cobblestone-road"></div>
                                 <div id="vehicle-track"
                                     style="position: absolute; bottom: 30px; left: 0; right: 0; height: 100px; overflow: visible; z-index: 10;">
                                 </div>
                             </div>
+
+                            <!-- Alerte Bruit -->
                             <div id="noise-scene"
                                 style="display: none; width: 100%; height: 100%; background: #e74c3c; align-items: center; justify-content: center; flex-direction: column; z-index: 100; position: absolute; top:0; left:0;">
                                 <i class="fa fa-bolt fa-beat-fade" style="font-size: 80px; color: #f1c40f;"></i>
@@ -122,7 +139,14 @@
                     </div>
                 </div>
 
-                <!-- Frise Chronologique -->
+                <!-- ========================================= -->
+                <!-- SECTION 2 : HISTORIQUE                    -->
+                <!-- ========================================= -->
+                <div class="section-header">
+                    <i class="fa fa-history"></i> <span id="history-title">Historique</span>
+                </div>
+
+                <!-- 3. Frise Chronologique -->
                 <div class="row">
                     <div class="col-12">
                         <div class="box box-primary">
@@ -147,43 +171,53 @@
                     </div>
                 </div>
 
-                <!-- Distribution & Tableau -->
+                <!-- 4. SECTION ANALYSE : Distribution (Gauche) & Tableau + Audio (Droite) -->
                 <div class="row">
+
+                    <!-- Colonne Gauche : Les 2 Graphiques de Distribution -->
                     <div class="col-md-6">
-                        <!-- Distribution Horaire -->
+
+                        <!-- A. Distribution par HORAIRE -->
                         <div class="box box-danger" style="margin-bottom: 20px;">
                             <div class="box-header with-border">
                                 <h3 class="box-title">Distribution par Horaire</h3>
                             </div>
                             <div class="box-body">
+                                <!-- Hauteur 380px -->
                                 <div class="chart-container" style="position: relative; height: 380px; width: 100%;">
                                     <canvas id="eventsChart"></canvas>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Distribution Puissance -->
+                        <!-- B. Distribution par PUISSANCE (dB) -->
                         <div class="box box-info">
                             <div class="box-header with-border">
                                 <h3 class="box-title">Distribution par Puissance (dB)</h3>
                             </div>
                             <div class="box-body">
+                                <!-- Hauteur 300px -->
                                 <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
                                     <canvas id="dbDistributionChart"></canvas>
                                 </div>
                             </div>
                         </div>
+
                     </div>
 
+                    <!-- Colonne Droite : Tableau + Lecteur Audio -->
                     <div class="col-md-6">
                         <div class="box box-warning" style="margin-bottom: 20px;">
                             <div class="box-header with-border">
                                 <h3 class="box-title">Derniers Événements (Période)</h3>
                             </div>
+
                             <div class="table-search-container">
                                 <input type="text" id="search-events" class="table-search-input"
                                     placeholder="🔍 Filtrer (ex: Sirène, >80dB, 12:00...)">
                             </div>
+
+                            <!-- Hauteur fixe 550px -->
                             <div class="box-body no-padding table-responsive" style="height: 550px; overflow-y: auto;">
                                 <table class="table table-striped" id="events-period-table">
                                     <thead>
@@ -206,6 +240,7 @@
                             </div>
                         </div>
 
+                        <!-- LECTEUR AUDIO AVEC PLACEHOLDER -->
                         <div id="global-audio-player-container" class="audio-player-container" style="width: 100%;">
                             <div
                                 style="background: #2d2d2d; padding: 20px; border-top: 4px solid #555; text-align: center; color: #777; height: 130px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
@@ -216,8 +251,7 @@
                     </div>
                 </div>
 
-                <h4 class="section-divider">Données Capteurs</h4>
-
+                <!-- 5. Graphiques Capteurs -->
                 <div class="row charts-row">
                     <div class="col-md-6">
                         <div class="box box-info">
@@ -277,6 +311,7 @@
                     </div>
                 </div>
 
+                <!-- 6. Tableau Top 20 -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="box box-danger">
@@ -304,13 +339,16 @@
                     </div>
                 </div>
 
-                <!-- TABLEAU DES INDICES CALCULÉS -->
+                <!-- ========================================= -->
+                <!-- SECTION 3 : INDICES COMPLÉMENTAIRES       -->
+                <!-- ========================================= -->
+                <div class="section-header">
+                    <i class="fa fa-flask"></i> Indices complémentaires (en ce moment)
+                </div>
+
                 <div class="row">
                     <div class="col-12">
                         <div class="box box-success">
-                            <div class="box-header with-border">
-                                <h3 class="box-title">Indices Environnementaux & Calculs Avancés</h3>
-                            </div>
                             <div class="box-body table-responsive no-padding">
                                 <table class="table table-striped table-hover" id="indices-table">
                                     <thead>
@@ -319,16 +357,14 @@
                                             <th style="width: 15%;">Indice</th>
                                             <th
                                                 style="width: 10%; background: #222; text-align: center; border-bottom: 2px solid #00a65a;">
-                                                Valeur Calculée</th>
+                                                Valeur</th>
                                             <th style="width: 10%;">Unité</th>
-                                            <th style="width: 20%;">Interprétation / État</th>
+                                            <th style="width: 20%;">Interprétation</th>
                                             <th style="width: 15%;">Seuils Typiques</th>
-                                            <th style="width: 15%;">Formule / Méthode</th>
+                                            <th style="width: 15%;">Formule</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        <!-- Rempli par JS -->
-                                    </tbody>
+                                    <tbody></tbody>
                                 </table>
                             </div>
                         </div>
@@ -341,28 +377,15 @@
         </div>
     </div>
 
-
     <!-- ======================================================= -->
-    <!-- ZONE DE SCRIPTS CORRIGÉE                                -->
+    <!-- ZONE DE SCRIPTS : Configuration                         -->
     <!-- ======================================================= -->
-
-
-
-
-    <!-- ======================================================= -->
-    <!-- ZONE DE CONFIGURATION (Simplifiée pour éviter les bugs) -->
-    <!-- ======================================================= -->
-
     <script>
-        // Juste un chiffre, VS Code ne cassera pas ça.
         const SOUND_THRESHOLD_CONFIG = {{ sound_threshold | default (40) }};
-
-        // On ne met PLUS les données ici. 
-        // main_v2.js ira les chercher proprement via l'API au chargement.
     </script>
 
-    <!-- Chargement du fichier JS (v=19) -->
-    <script src="{{ url_for('static', filename='js/main_v2.js') }}?v=19"></script>
+    <!-- v=20 pour forcer la mise à jour -->
+    <script src="{{ url_for('static', filename='js/main_v2.js') }}?v=20"></script>
 
 </body>
 

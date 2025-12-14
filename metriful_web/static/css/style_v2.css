@@ -930,3 +930,34 @@ body.loading #loading-overlay {
     font-size: 14px !important;
     color: #666 !important;
 }
+
+/* --- SÉPARATEURS DE SECTIONS --- */
+.section-header {
+    background-color: #222d32;
+    /* Fond sombre légèrement différent du body */
+    color: #fff;
+    padding: 15px 20px;
+    margin: 40px 0 20px 0;
+    /* Espace au-dessus et en-dessous */
+    font-size: 24px;
+    font-weight: 300;
+    /* Police fine élégante */
+    border-left: 5px solid #00c0ef;
+    /* Bordure Cyan caractéristique */
+    border-radius: 3px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    /* Espace entre icône et texte */
+}
+
+.section-header i {
+    color: #b8c7ce;
+    /* Couleur icône */
+}
+
+/* Le premier séparateur a moins de marge en haut */
+.section-header.first {
+    margin-top: 10px;
+}
