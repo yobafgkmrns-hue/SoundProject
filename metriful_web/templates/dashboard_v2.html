@@ -6,27 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SoundProject V2 (FINAL)</title>
 
-    <!-- Bibliothèques JS -->
+    <!-- 1. Chart.js & Date Adapter -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <!-- AJOUT : Moteur tactile et Plugin Zoom -->
+
+    <!-- 2. PLUGINS ZOOM (HammerJS + Plugin Zoom) - CORRIGÉS -->
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
+    <!-- 3. WaveSurfer (Audio) -->
     <script src="https://unpkg.com/wavesurfer.js@7"></script>
 
-    <!-- FontAwesome (Dernière version) -->
+    <!-- 4. Styles & FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <!-- Polices -->
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap"
         rel="stylesheet">
-
-    <!-- Favicon (Son) -->
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔊</text></svg>">
-
-    <!-- Style CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style_v2.css') }}">
 </head>
 
@@ -51,13 +47,9 @@
         </a>
 
         <nav class="navbar">
-            <!-- 1. Heure de dernière activité (Gauche) -->
             <span class="navbar-text" id="last-updated">En attente...</span>
 
-            <!-- 2. Boutons de contrôle (Droite) -->
             <div class="navbar-right-menu" style="display: flex; align-items: center; gap: 20px; margin-right: 15px;">
-
-                <!-- Switch Auto-Play -->
                 <div class="autoplay-container" style="display: flex; align-items: center;">
                     <span style="color: #b8c7ce; font-size: 14px; margin-right: 10px;">Auto-Play</span>
                     <label class="switch">
@@ -65,8 +57,6 @@
                         <span class="slider round"></span>
                     </label>
                 </div>
-
-                <!-- Lien Vue Classique -->
                 <a href="/" class="btn-switch-view"><i class="fa fa-desktop"></i> Vue Classique</a>
             </div>
         </nav>
@@ -74,7 +64,6 @@
 
     <div class="wrapper">
         <div class="content-wrapper">
-            <!-- Barre de Contrôle (Période & Date) -->
             <section class="content-header">
                 <h1>Tableau de Bord <small>Surveillance Environnementale</small></h1>
                 <div class="controls-bar">
@@ -93,25 +82,21 @@
             </section>
 
             <section class="content">
-                <!-- 1. KPIs (Injectés par JS, sur 2 colonnes) -->
                 <div class="row" id="kpi-container"></div>
 
-                <!-- 2. Scène Rue de Paris -->
+                <!-- Scène Rue de Paris -->
                 <div class="row">
                     <div class="col-12">
                         <div id="animation-stage" class="box"
                             style="height: 280px; background: #87CEEB; position: relative; overflow: hidden; border-top: 3px solid #605ca8; margin-bottom: 20px; border-radius: 8px;">
-
                             <div id="street-scene" style="width: 100%; height: 100%; position: relative;">
                                 <div class="sky-background"></div>
                                 <div class="paris-buildings"></div>
                                 <div class="cobblestone-road"></div>
-                                <!-- Piste pour les voitures -->
                                 <div id="vehicle-track"
                                     style="position: absolute; bottom: 30px; left: 0; right: 0; height: 100px; overflow: visible; z-index: 10;">
                                 </div>
                             </div>
-
                             <div id="noise-scene"
                                 style="display: none; width: 100%; height: 100%; background: #e74c3c; align-items: center; justify-content: center; flex-direction: column; z-index: 100; position: absolute; top:0; left:0;">
                                 <i class="fa fa-bolt fa-beat-fade" style="font-size: 80px; color: #f1c40f;"></i>
@@ -123,7 +108,7 @@
                     </div>
                 </div>
 
-                <!-- 3. Frise Chronologique -->
+                <!-- Frise Chronologique -->
                 <div class="row">
                     <div class="col-12">
                         <div class="box box-primary">
@@ -131,8 +116,6 @@
                                 <h3 class="box-title">
                                     Frise Chronologique
                                     <span id="new-event-counter" class="badge bg-blue" style="display: none;">0</span>
-
-                                    <!-- AJOUT DU MODE D'EMPLOI -->
                                     <small
                                         style="color: #bbb; font-size: 14px; margin-left: 15px; font-weight: normal;">
                                         <i class="fa fa-hand-pointer"></i> Glisser pour scroller &nbsp;|&nbsp;
@@ -141,50 +124,52 @@
                                     </small>
                                 </h3>
                             </div>
-
                             <div class="box-body">
-                                <!-- On enlève la div de scroll, on garde juste le chart container simple -->
                                 <div class="chart-container" style="position: relative; height: 220px; width: 100%;">
                                     <canvas id="eventsTimelineChart"></canvas>
                                 </div>
                             </div>
-
-
                         </div>
                     </div>
                 </div>
 
-                <!-- 4. Distribution & Tableau Derniers Événements (HAUTEUR HARMONISÉE 550px) -->
+                <!-- Distribution & Tableau -->
                 <div class="row">
-                    <!-- Colonne Gauche : Distribution -->
                     <div class="col-md-6">
-                        <div class="box box-danger">
+                        <!-- Distribution Horaire -->
+                        <div class="box box-danger" style="margin-bottom: 20px;">
                             <div class="box-header with-border">
-                                <h3 class="box-title">Distribution des Événements</h3>
+                                <h3 class="box-title">Distribution par Horaire</h3>
                             </div>
                             <div class="box-body">
-                                <!-- Hauteur fixe 550px -->
-                                <div class="chart-container" style="position: relative; height: 550px; width: 100%;">
+                                <div class="chart-container" style="position: relative; height: 380px; width: 100%;">
                                     <canvas id="eventsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Distribution Puissance -->
+                        <div class="box box-info">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Distribution par Puissance (dB)</h3>
+                            </div>
+                            <div class="box-body">
+                                <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                                    <canvas id="dbDistributionChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Colonne Droite : Tableau -->
                     <div class="col-md-6">
-                        <div class="box box-warning">
+                        <div class="box box-warning" style="margin-bottom: 20px;">
                             <div class="box-header with-border">
                                 <h3 class="box-title">Derniers Événements (Période)</h3>
                             </div>
-
-                            <!-- Barre de recherche -->
                             <div class="table-search-container">
                                 <input type="text" id="search-events" class="table-search-input"
                                     placeholder="🔍 Filtrer (ex: Sirène, >80dB, 12:00...)">
                             </div>
-
-                            <!-- Hauteur fixe 550px -->
                             <div class="box-body no-padding table-responsive" style="height: 550px; overflow-y: auto;">
                                 <table class="table table-striped" id="events-period-table">
                                     <thead>
@@ -206,12 +191,19 @@
                                 </table>
                             </div>
                         </div>
+
+                        <div id="global-audio-player-container" class="audio-player-container" style="width: 100%;">
+                            <div
+                                style="background: #2d2d2d; padding: 20px; border-top: 4px solid #555; text-align: center; color: #777; height: 130px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                                <i class="fa fa-music" style="font-size: 30px; margin-bottom: 10px; opacity: 0.5;"></i>
+                                <span>Aucun son sélectionné</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <h4 class="section-divider">Données Capteurs</h4>
 
-                <!-- 5. Graphiques Capteurs -->
                 <div class="row charts-row">
                     <div class="col-md-6">
                         <div class="box box-info">
@@ -271,20 +263,16 @@
                     </div>
                 </div>
 
-                <!-- 6. Tableau Top 20 -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="box box-danger">
                             <div class="box-header with-border">
                                 <h3 class="box-title">Top 20 Événements (par Pic)</h3>
                             </div>
-
-                            <!-- Barre de recherche -->
                             <div class="table-search-container">
                                 <input type="text" id="search-top" class="table-search-input"
                                     placeholder="🔍 Filtrer (ex: >90dB...)">
                             </div>
-
                             <div class="box-body no-padding table-responsive" style="height: 400px; overflow-y: auto;">
                                 <table class="table table-striped" id="top-events-table">
                                     <thead>
@@ -302,19 +290,34 @@
                     </div>
                 </div>
 
-                <!-- Lecteur Audio Global -->
-                <div id="global-audio-player-container" class="audio-player-container"></div>
-
-                <div class="footer-links">
-                    <a href="/labeling" class="btn btn-app"><i class="fa fa-edit"></i> Calibration</a>
-                    <a href="/audio_review" class="btn btn-app"><i class="fa fa-headphones"></i> Revue Audio</a>
-                </div>
+                <div class="footer-links"><a href="/labeling" class="btn btn-app"><i class="fa fa-edit"></i>
+                        Calibration</a></div>
             </section>
         </div>
     </div>
 
-    <!-- Chargement du JS avec version pour forcer le rafraîchissement -->
-    <script src="{{ url_for('static', filename='js/main_v2.js') }}?v=13"></script>
+
+    <!-- ======================================================= -->
+    <!-- ZONE DE SCRIPTS CORRIGÉE                                -->
+    <!-- ======================================================= -->
+
+
+
+
+    <!-- ======================================================= -->
+    <!-- ZONE DE CONFIGURATION (Simplifiée pour éviter les bugs) -->
+    <!-- ======================================================= -->
+
+    <script>
+        // Juste un chiffre, VS Code ne cassera pas ça.
+        const SOUND_THRESHOLD_CONFIG = {{ sound_threshold | default (40) }};
+
+        // On ne met PLUS les données ici. 
+        // main_v2.js ira les chercher proprement via l'API au chargement.
+    </script>
+
+    <!-- Chargement du fichier JS (v=19) -->
+    <script src="{{ url_for('static', filename='js/main_v2.js') }}?v=19"></script>
 
 </body>
 

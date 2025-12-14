@@ -183,4 +183,4 @@ def get_dashboard_data(period_str='24h', ref_date_str=None):
     cursor.close()
     conn.close()
     
-    return { "kpis": kpis_formatted, "stats": stats, "history_data": history_data, "events_period": sound_events_period, "top_events": top_events, "window_status": window_status, "manual_labels": manual_labels }
+    return { "kpis": kpis_formatted, "stats": stats, "history_data": history_data, "events_period": sound_events_period, "top_events": top_events, "window_status": window_status, "manual_labels": manual_labels,  "sound_threshold": config.SOUND_THRESHOLD_DBA}
