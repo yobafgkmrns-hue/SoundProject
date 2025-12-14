@@ -877,3 +877,56 @@ body.loading #loading-overlay {
     filter: blur(2px);
     /* Léger flou pour adoucir */
 }
+
+/* --- TABLEAU DES INDICES (Police XXL) --- */
+
+/* 1. En-têtes et Cellules générales */
+#indices-table th,
+#indices-table td {
+    font-size: 18px !important;
+    /* Augmenté (était 16px) */
+    padding: 15px 15px !important;
+    /* Plus d'aération verticale */
+    vertical-align: middle;
+}
+
+/* 2. En-têtes spécifiques */
+#indices-table th {
+    font-size: 16px !important;
+    /* Les titres un peu plus petits que les données */
+    text-transform: uppercase;
+    color: #888;
+}
+
+/* 3. La Colonne "Catégorie" (1ère colonne) */
+#indices-table td:first-child {
+    font-size: 16px !important;
+    font-weight: 700;
+    color: #aaa;
+    border-right: 1px solid #444;
+    /* Séparation visuelle */
+}
+
+/* 4. La Colonne "Valeur Calculée" (3ème colonne maintenant !) */
+#indices-table td:nth-child(3) {
+    font-size: 28px !important;
+    /* ÉNORME pour la lisibilité */
+    font-weight: 900 !important;
+    /* Très gras */
+    padding: 10px !important;
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+/* 5. Les Badges (Interprétation) */
+#indices-table .badge {
+    font-size: 15px !important;
+    padding: 8px 14px !important;
+    /* Badge plus large */
+    border-radius: 6px;
+}
+
+/* 6. Formules (Dernière colonne) */
+#indices-table td:last-child {
+    font-size: 14px !important;
+    color: #666 !important;
+}

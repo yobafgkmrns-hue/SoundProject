@@ -217,6 +217,9 @@ async function fetchAndUpdateKPIs() {
         currentData.kpis = d.kpis;
         currentData.window_status = d.window_status;
         updateKPIs(d.kpis);
+        // --- AJOUT ---
+        updateIndicesTable(d.kpis);
+        // -------------
         updateLastActivityDisplay({ kpis: d.kpis, events_period: currentData.events_period });
         updateEnvironment(d.kpis); // Mise à jour météo
     } catch (e) { }
@@ -227,6 +230,9 @@ function updateDashboardUI(data, period) {
     updateLastActivityDisplay(data);
     updateEnvironment(data.kpis);
     updateKPIs(data.kpis);
+    // --- AJOUT ---
+    updateIndicesTable(data.kpis);
+    // -------------
     updateAllCharts(data, period);
     updateEventsTable(data.events_period, 'events-period-table');
     updateEventsTable(data.top_events, 'top-events-table');
@@ -256,13 +262,28 @@ function updateLastActivityDisplay(data) {
 }
 
 // --- UPDATE ENVIRONNEMENT ---
+// --- GESTION DE L'ENVIRONNEMENT (Capteurs & Dates) ---
 function updateEnvironment(kpis) {
     const now = new Date();
-    const hour = now.getHours();
     const month = now.getMonth() + 1;
     const day = now.getDate();
-    const isNight = (hour >= 20 || hour < 7);
 
+    // 1. DÉTECTION JOUR / NUIT (Intelligente)
+    let isNight = false;
+
+    // A. Priorité au capteur de lumière
+    if (kpis && kpis.light_lux && kpis.light_lux.value != null) {
+        // Si moins de 20 Lux, on considère qu'il fait nuit
+        // (20 Lux correspond environ à l'éclairage public ou au crépuscule profond)
+        isNight = kpis.light_lux.value < 20;
+    }
+    // B. Fallback sur l'horaire si pas de données capteur
+    else {
+        const hour = now.getHours();
+        isNight = (hour >= 20 || hour < 7);
+    }
+
+    // Application du mode
     const sky = document.getElementById('sky-layer');
     const celestial = document.getElementById('celestial-body');
     const stage = document.getElementById('animation-stage');
@@ -278,36 +299,30 @@ function updateEnvironment(kpis) {
             if (celestial) celestial.className = '';
         }
     }
+
+    // 2. MÉTÉO (Pluie via Pression)
     const weatherLayer = document.getElementById('weather-layer');
-    if (weatherLayer && kpis && kpis.pressure_pa) {
+    if (weatherLayer && kpis && kpis.pressure_pa && kpis.pressure_pa.value != null) {
         const pressureHpa = kpis.pressure_pa.value / 100;
-        if (pressureHpa < 1005) weatherLayer.className = 'rain';
-        else weatherLayer.className = '';
+        // < 1005 hPa = Dépression = Pluie probable
+        if (pressureHpa < 1005) {
+            weatherLayer.className = 'rain';
+        } else {
+            weatherLayer.className = '';
+        }
     }
 
     // 3. SAISON / DATES SPÉCIALES
     const decorLayer = document.getElementById('seasonal-decor');
     if (decorLayer) {
-        // Réinitialisation par défaut
-        decorLayer.className = '';
+        decorLayer.className = ''; // Reset
 
-        // NOËL : Du 15/12 au 26/12 inclus
         const isChristmas = (month === 12 && day >= 15 && day <= 26);
-
-        // NOUVEL AN : Du 30/12 au 02/01 inclus
-        // (Note: mois 1 = Janvier, mois 12 = Décembre)
         const isNewYear = (month === 12 && day >= 30) || (month === 1 && day <= 2);
-
-        // 14 JUILLET : Le 13 et le 14 Juillet
         const isBastilleDay = (month === 7 && (day === 13 || day === 14));
 
-        if (isChristmas) {
-            decorLayer.className = 'christmas-garland';
-        }
-        else if (isNewYear || isBastilleDay) {
-            // On réutilise le décor "Feux d'artifice" du Nouvel An
-            decorLayer.className = 'new-year-decor';
-        }
+        if (isChristmas) decorLayer.className = 'christmas-garland';
+        else if (isNewYear || isBastilleDay) decorLayer.className = 'new-year-decor';
     }
 }
 
@@ -632,3 +647,272 @@ function formatValue(v, d = 0, u = '') { return (v != null && !isNaN(v)) ? parse
 function drawMiniSpectrum(id, d) { const c = document.getElementById(id); if (c) new Chart(c, { type: 'bar', data: { labels: [1, 2, 3, 4, 5, 6], datasets: [{ data: d, backgroundColor: '#605ca8' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: false, tooltip: false }, scales: { x: { display: false }, y: { display: false } }, animation: false } }); }
 function playAudio(f) { const c = document.getElementById('global-audio-player-container'); if (!c) return; if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; } const a = new Audio(); a.src = '/audio_files/' + f; a.crossOrigin = "anonymous"; a.volume = 0.8; c.innerHTML = `<div class="waveform-wrapper" style="display:flex;align-items:center;gap:20px;background:#2d2d2d;padding:15px;border-top:4px solid #00c0ef;box-shadow:0 -5px 15px rgba(0,0,0,0.5);"><div class="waveform-controls"><button id="pp_btn" class="btn-play-pause" style="width:60px;height:60px;font-size:24px;border-radius:50%;background:#00c0ef;border:none;color:white;cursor:pointer;"><i class="fa fa-play"></i></button></div><div class="waveform-visual" style="flex-grow:1;"><div id="wf"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:5px;"><i id="vol_icon" class="fa fa-volume-up" style="color:#b8c7ce;cursor:pointer;font-size:18px;"></i><input type="range" id="vol_slider" min="0" max="1" step="0.05" value="0.8" style="width:150px;cursor:pointer;accent-color:#00c0ef;"></div><button class="btn-close-player" id="close_btn" style="background:none;border:none;color:#777;font-size:24px;cursor:pointer;margin-left:10px;"><i class="fa fa-times"></i></button></div>`; wavesurfer = WaveSurfer.create({ container: '#wf', media: a, waveColor: '#00c0ef', progressColor: '#fff', height: 100, normalize: true, cursorWidth: 2, barWidth: 3, barGap: 2, barRadius: 3 }); wavesurfer.on('ready', () => { wavesurfer.play(); document.getElementById('pp_btn').innerHTML = '<i class="fa fa-pause"></i>'; }); wavesurfer.on('finish', () => { document.getElementById('pp_btn').innerHTML = '<i class="fa fa-play"></i>'; }); document.getElementById('pp_btn').onclick = () => { wavesurfer.playPause(); document.getElementById('pp_btn').innerHTML = `<i class="fa ${wavesurfer.isPlaying() ? 'fa-pause' : 'fa-play'}"></i>`; }; const s = document.getElementById('vol_slider'); const v = document.getElementById('vol_icon'); let lv = 0.8; s.oninput = function () { const val = parseFloat(this.value); a.volume = val; uV(val); if (val > 0) lv = val; }; v.onclick = function () { if (a.volume > 0) { a.volume = 0; s.value = 0; uV(0); } else { a.volume = lv; s.value = lv; uV(lv); } }; function uV(val) { v.className = val === 0 ? 'fa fa-volume-off' : (val < 0.5 ? 'fa fa-volume-down' : 'fa fa-volume-up'); } document.getElementById('close_btn').onclick = () => { if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; } c.innerHTML = ''; }; }
 let notifTimeout; function showNotification(message) { const b = document.getElementById('notification-banner'); const t = document.getElementById('notif-text'); if (!b || !t) return; t.textContent = message; b.classList.add('visible'); if (notifTimeout) clearTimeout(notifTimeout); notifTimeout = setTimeout(() => { b.classList.remove('visible'); }, 10000); }
+
+// --- CALCULS SCIENTIFIQUES & TABLEAU INDICES ---
+// --- CALCULS SCIENTIFIQUES COMPLETS (23 INDICES) ---
+// --- CALCULS SCIENTIFIQUES COMPLETS (Avec Catégories) ---
+function updateIndicesTable(kpis) {
+    const tbody = document.querySelector('#indices-table tbody');
+    if (!tbody || !kpis) return;
+
+    // 1. Données Brutes
+    const T = kpis.temperature_c ? kpis.temperature_c.value : null;
+    const RH = kpis.humidity_pct ? kpis.humidity_pct.value : null;
+    const P = kpis.pressure_pa ? kpis.pressure_pa.value : null;
+    const CO2 = kpis.bsec_co2_ppm ? kpis.bsec_co2_ppm.value : null;
+    const Lux = kpis.light_lux ? kpis.light_lux.value : null;
+    const dB = kpis.sound_spl_dba ? kpis.sound_spl_dba.value : 0;
+    const P_delta_24h = kpis.pressure_pa ? kpis.pressure_pa.delta_24h : 0;
+
+    if (T == null || RH == null) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Données insuffisantes...</td></tr>';
+        return;
+    }
+
+    // 2. Calculs Intermédiaires
+    const CO2_ext = 420;
+    const es = 6.112 * Math.exp((17.67 * T) / (T + 243.5));
+    const e = es * (RH / 100.0);
+    const a = 17.27, b = 237.7;
+    const alpha = Math.log(RH / 100) + (a * T) / (b + T);
+    const Td = (b * alpha) / (a - alpha);
+
+    function getHeatIndex(cT, cRH) {
+        if (cT < 27) return cT;
+        const c1 = -8.78469475556, c2 = 1.61139411, c3 = 2.33854883889, c4 = -0.14611605;
+        const c5 = -0.012308094, c6 = -0.0164248277778, c7 = 0.002211732;
+        const c8 = 0.00072546, c9 = -0.000003582;
+        return c1 + c2 * cT + c3 * cRH + c4 * cT * cRH + c5 * cT * cT + c6 * cRH * cRH + c7 * cT * cT * cRH + c8 * cT * cRH * cRH + c9 * cT * cT * cRH * cRH;
+    }
+
+    function getGlobalScore() {
+        let score = 100;
+        score -= Math.abs(T - 21) * 2;
+        score -= Math.abs(RH - 50) * 0.5;
+        if (CO2 > 800) score -= (CO2 - 800) / 20;
+        if (dB > 45) score -= (dB - 45);
+        return Math.max(0, Math.min(100, score));
+    }
+
+    // 3. Liste des Indices avec CATÉGORIE
+    const rowsData = [
+        // CONFORT THERMIQUE
+        {
+            category: "Confort Thermique",
+            name: "Humidex",
+            val: T + 0.5555 * (e - 10),
+            unit: "°Indice",
+            formula: "T + 0.55 * (e - 10)",
+            getUi: (v) => { if (v < 30) return ["Confortable", "#00a65a"]; if (v < 40) return ["Inconfort", "#f39c12"]; return ["Danger", "#dd4b39"]; },
+            range: "<30 OK | >40 Danger"
+        },
+        {
+            category: "Confort Thermique",
+            name: "Heat Index (HI)",
+            val: getHeatIndex(T, RH),
+            unit: "°C Ressenti",
+            formula: "NOAA Regression",
+            getUi: (v) => { if (v < 27) return ["Normal", "#00a65a"]; if (v < 32) return ["Prudence", "#f39c12"]; return ["Danger", "#dd4b39"]; },
+            range: ">32 Danger"
+        },
+        {
+            category: "Confort Thermique",
+            name: "Temp. Ressentie",
+            val: T - 0.55 * (1 - RH / 100) * (T - 14.5),
+            unit: "°C",
+            formula: "T - 0.55(1-RH)(T-14.5)",
+            getUi: (v) => { if (Math.abs(v - T) < 1) return ["Proche Réel", "#00a65a"]; return [v > T ? "Plus chaud" : "Plus froid", "#3c8dbc"]; },
+            range: "Dépend T & RH"
+        },
+
+        // PHYSIQUE AIR
+        {
+            category: "Physique de l'Air",
+            name: "Point de Rosée",
+            val: Td,
+            unit: "°C",
+            formula: "Magnus-Tetens",
+            getUi: (v) => { if ((T - v) < 3) return ["Condensation", "#dd4b39"]; return ["Sec", "#00a65a"]; },
+            range: "T - Td < 3°C = Risque"
+        },
+        {
+            category: "Physique de l'Air",
+            name: "Humidité Absolue",
+            val: (6.112 * Math.exp((17.67 * T) / (T + 243.5)) * RH * 2.1674) / (273.15 + T),
+            unit: "g/m³",
+            formula: "Loi gaz parfaits",
+            getUi: (v) => { if (v < 5) return ["Air sec", "#f39c12"]; if (v > 12) return ["Air humide", "#3c8dbc"]; return ["Confort", "#00a65a"]; },
+            range: "5-12 g/m³"
+        },
+        {
+            category: "Physique de l'Air",
+            name: "Densité Air",
+            val: P / (287.05 * (T + 273.15)),
+            unit: "kg/m³",
+            formula: "P / (R * T)",
+            getUi: (v) => ["Info", "#777"],
+            range: "~1.225 au niveau mer"
+        },
+
+        // QUALITÉ AIR
+        {
+            category: "Qualité de l'Air",
+            name: "Indice CO₂",
+            val: CO2,
+            unit: "ppm",
+            formula: "Lecture Capteur",
+            getUi: (v) => { if (v < 800) return ["Excellent", "#00a65a"]; if (v < 1200) return ["Moyen", "#f39c12"]; return ["Mauvais", "#dd4b39"]; },
+            range: "<800 Excellent"
+        },
+        {
+            category: "Qualité de l'Air",
+            name: "Confinement",
+            val: (CO2 - CO2_ext) / CO2_ext,
+            unit: "Indice",
+            formula: "(Ci - Ce) / Ce",
+            getUi: (v) => { if (v < 1) return ["Nul", "#00a65a"]; if (v < 2) return ["Faible", "#f39c12"]; return ["Élevé", "#dd4b39"]; },
+            range: "0-1 OK | >2 Confiné"
+        },
+        {
+            category: "Qualité de l'Air",
+            name: "Air Respiré",
+            val: (CO2 > 420) ? (CO2 - 420) / (38000 - 420) * 100 : 0,
+            unit: "%",
+            formula: "Rebreathed Fraction",
+            getUi: (v) => { if (v < 1) return ["Air Frais", "#00a65a"]; if (v < 2.5) return ["Acceptable", "#f39c12"]; return ["Risque Viral", "#dd4b39"]; },
+            range: ">2% = Aérer"
+        },
+
+        // AGRICULTURE
+        {
+            category: "Végétal / Agri",
+            name: "VPD",
+            val: (es - e) / 10,
+            unit: "kPa",
+            formula: "es - e",
+            getUi: (v) => { if (v < 0.4) return ["Risque Fongique", "#dd4b39"]; if (v >= 0.8 && v <= 1.2) return ["Idéal", "#00a65a"]; return ["Stress Hydrique", "#f39c12"]; },
+            range: "0.8 - 1.2 kPa"
+        },
+        {
+            category: "Végétal / Agri",
+            name: "Photosynthèse",
+            val: (Lux * (CO2 / 400)) / 100,
+            unit: "Score",
+            formula: "Lux * (CO2/Ref)",
+            getUi: (v) => { if (v < 1) return ["Faible", "#777"]; if (v < 10) return ["Moyen", "#f39c12"]; return ["Fort", "#00a65a"]; },
+            range: ">10 Croissance"
+        },
+
+        // SANTÉ HUMAINE
+        {
+            category: "Santé Humaine",
+            name: "Bulbe Humide",
+            val: T * Math.atan(0.151977 * Math.pow(RH + 8.313659, 0.5)) + Math.atan(T + RH) - Math.atan(RH - 1.676331) + 0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035,
+            unit: "°C Tw",
+            formula: "Stull Formula",
+            getUi: (v) => { if (v < 24) return ["Sûr", "#00a65a"]; if (v < 28) return ["Stress", "#f39c12"]; return ["DANGER MORTEL", "#000"]; },
+            range: ">31°C = Danger Vie"
+        },
+        {
+            category: "Santé Humaine",
+            name: "Perte Cognitive",
+            val: (() => { let l = 0; if (CO2 > 1000) l += (CO2 - 1000) * 0.02; if (T > 24) l += (T - 24) * 1.5; return Math.min(100, l); })(),
+            unit: "%",
+            formula: "CO2 + Chaleur",
+            getUi: (v) => { if (v < 5) return ["Négligeable", "#00a65a"]; return ["Baisse", "#f39c12"]; },
+            range: "0% Idéal"
+        },
+        {
+            category: "Santé Humaine",
+            name: "Intelligibilité",
+            val: dB,
+            unit: "dB Ambiant",
+            formula: "Lecture Micro",
+            getUi: (v) => { if (v < 55) return ["Parole Normale", "#00a65a"]; if (v < 75) return ["Voix Haussée", "#f39c12"]; return ["Crier", "#dd4b39"]; },
+            range: "<55dB Confort"
+        },
+
+        // MÉTÉO
+        {
+            category: "Météorologie",
+            name: "Tendance Baro",
+            val: P_delta_24h ? P_delta_24h / 100 : 0,
+            unit: "hPa/24h",
+            formula: "ΔP (24h)",
+            getUi: (v) => { if (v > 1) return ["Amélioration", "#00a65a"]; if (v < -1) return ["Pluie / Vent", "#3c8dbc"]; return ["Stable", "#777"]; },
+            range: "+/- 1 hPa"
+        },
+        {
+            category: "Météorologie",
+            name: "Altitude Est.",
+            val: 44330 * (1 - Math.pow((P / 100) / 1013.25, 0.1903)),
+            unit: "m",
+            formula: "Hypsométrique",
+            getUi: (v) => ["Info", "#777"],
+            range: "Selon P atm"
+        },
+        {
+            category: "Météorologie",
+            name: "Luminosité",
+            val: Lux,
+            unit: "Lux",
+            formula: "Capteur",
+            getUi: (v) => v < 20 ? ["NUIT", "#34495e"] : ["JOUR", "#f1c40f"],
+            range: "<20 Lux = Nuit"
+        },
+
+        // SÉCURITÉ
+        {
+            category: "Sécurité Bâtiment",
+            name: "Condensation",
+            val: (T - 3) < Td ? 1 : 0,
+            unit: "Booléen",
+            formula: "T_surf < Td",
+            getUi: (v) => v ? ["OUI (Mur froid)", "#dd4b39"] : ["NON", "#00a65a"],
+            range: "Si T_mur < Td"
+        },
+        {
+            category: "Sécurité Bâtiment",
+            name: "Conservation",
+            val: RH,
+            unit: "% RH",
+            formula: "Normes Musées",
+            getUi: (v) => { if (v < 40) return ["Dessèchement", "#f39c12"]; if (v > 65) return ["Moisissure", "#dd4b39"]; return ["Stable", "#00a65a"]; },
+            range: "45-60% Idéal"
+        },
+
+        // SCORE GLOBAL
+        {
+            category: "SYNTHÈSE",
+            name: "Confort Global",
+            val: getGlobalScore(),
+            unit: "/ 100",
+            formula: "Pondération",
+            getUi: (v) => { if (v > 80) return ["Excellent", "#00a65a"]; if (v > 50) return ["Correct", "#f39c12"]; return ["Médiocre", "#dd4b39"]; },
+            range: "Objectif 100"
+        }
+    ];
+
+    // --- RENDU HTML AVEC NOUVELLE COLONNE ---
+    tbody.innerHTML = rowsData.map(row => {
+        if (row.val === null) return '';
+        const [statusText, statusColor] = row.getUi(row.val);
+        const valFormatted = (typeof row.val === 'number') ? parseFloat(row.val).toFixed(1) : row.val;
+
+        return `
+            <tr>
+                <!-- Colonne Catégorie (Gris clair, en gras) -->
+                <td style="color: #bbb; font-weight: bold; font-size: 14px;">${row.category}</td>
+                
+                <td style="font-weight: 600;">${row.name}</td>
+                <td style="font-weight: bold; color: #fff; background-color: #222; text-align: center; font-size: 16px; border-left: 4px solid ${statusColor};">
+                    ${valFormatted}
+                </td>
+                <td>${row.unit}</td>
+                <td><span class="badge" style="background-color: ${statusColor}; font-size: 13px;">${statusText}</span></td>
+                <td style="color: #999; font-style: italic;">${row.range}</td>
+                <td style="color: #666; font-family: monospace; font-size: 12px;">${row.formula}</td>
+            </tr>
+        `;
+    }).join('');
+}
