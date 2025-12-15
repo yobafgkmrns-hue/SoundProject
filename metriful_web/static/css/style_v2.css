@@ -299,6 +299,7 @@ body {
 
 .trend-down {
     color: #00a65a;
+    period-table
 }
 
 /* Couleurs de fond */
@@ -376,36 +377,56 @@ body {
 }
 
 /* Style Spécifique Tableaux Événements */
+/* --- TABLEAUX ÉVÉNEMENTS (Centrage & Style) --- */
+
+/* Cible les en-têtes (th) et les cellules (td) des DEUX tableaux */
+/* --- TABLEAUX ÉVÉNEMENTS (Centrage & Style Corrigés) --- */
+
+/* 1. Centrage général des cellules */
 #events-period-table th,
 #events-period-table td,
 #top-events-table th,
 #top-events-table td {
+    text-align: center !important;
+    vertical-align: middle !important;
     font-size: 18px !important;
     padding: 8px 10px !important;
     height: 45px !important;
-    vertical-align: middle;
 }
 
+/* 2. Centrage du Spectre (Le graphique est dans une div) */
+#events-period-table td div {
+    margin: 0 auto !important;
+    /* Force le bloc div à se centrer */
+    display: block;
+}
+
+/* 3. Centrage des Badges */
 #events-period-table .badge,
 #top-events-table .badge {
     font-size: 14px !important;
     padding: 5px 10px !important;
-    border-radius: 10px;
-    color: #fff;
+    display: inline-block;
 }
 
+/* 4. Correction du Bouton Audio */
 #events-period-table .action-btn,
 #top-events-table .action-btn {
-    width: 30px !important;
-    height: 30px !important;
+    margin: 0 auto !important;
+    /* Centre le bouton dans la case */
+
+    /* Utilisation de Flexbox pour centrer l'icône DANS le bouton */
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    width: 32px !important;
+    /* Taille fixe carrée */
+    height: 32px !important;
     font-size: 14px !important;
-    line-height: 30px !important;
+    border-radius: 4px !important;
     padding: 0 !important;
-    background-color: #3c8dbc;
-    border: none;
-    color: white;
-    border-radius: 3px;
-    cursor: pointer;
+    /* Pas de padding interne qui décale */
 }
 
 /* Recherche Tableau */
