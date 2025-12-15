@@ -59,48 +59,42 @@ Chart.defaults.font.size = 15;
 
 // --- INITIALISATION ---
 document.addEventListener('DOMContentLoaded', function () {
+    // 1. Init Date Picker
     const datePicker = document.getElementById('date-picker');
     if (datePicker) datePicker.value = toLocalISOString(new Date());
 
     console.log("Chargement initial...");
-
-    // Initialisation du titre de la section Historique
-    updateSectionTitle('24h');
-
-    // Chargement des données
+    // Premier chargement
     fetchDataAndUpdate('24h', null, true);
 
+    // 2. Gestion Auto-Play
     const autoPlayToggle = document.getElementById('autoplay-toggle');
     if (autoPlayToggle) {
         autoPlayToggle.addEventListener('change', function () { isAutoPlay = this.checked; });
     }
 
+    // 3. Gestion des boutons
     document.querySelectorAll('.period-btn').forEach(button => {
         button.addEventListener('click', function () {
             if (document.body.classList.contains('loading')) return;
             currentPeriod = this.dataset.period;
             document.querySelector('.period-btn.active').classList.remove('active');
             this.classList.add('active');
-
-            // Mise à jour du titre lors du clic
             updateSectionTitle(currentPeriod);
-
             fetchDataAndUpdate(currentPeriod, datePicker.value);
         });
     });
 
     const validateBtn = document.getElementById('validate-date-btn');
-    if (validateBtn) {
-        validateBtn.addEventListener('click', () => fetchDataAndUpdate(currentPeriod, datePicker.value));
-    }
+    if (validateBtn) validateBtn.addEventListener('click', () => fetchDataAndUpdate(currentPeriod, datePicker.value));
 
-    // Filtres
+    // Filtres Tableaux
     const searchPeriod = document.getElementById('search-events');
     if (searchPeriod) searchPeriod.addEventListener('keyup', () => filterTable('events-period-table', searchPeriod.value));
     const searchTop = document.getElementById('search-top');
     if (searchTop) searchTop.addEventListener('keyup', () => filterTable('top-events-table', searchTop.value));
 
-    // SSE
+    // 4. SSE (Temps réel - Prioritaire)
     const eventSource = new EventSource("/api/stream_events");
     eventSource.onmessage = function (event) {
         if (event.data === "new_event") {
@@ -112,9 +106,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }, 1500);
         } else if (event.data === "new_sensor") {
+            console.log("🌡️ SSE: Signal Capteur reçu.");
             fetchAndUpdateKPIs();
         }
     };
+
+    // 5. SÉCURITÉ MOBILE (Backup Timer)
+    // Force une mise à jour des KPIs toutes les 60 secondes
+    // Utile si le téléphone "dort" et rate le signal SSE
+    setInterval(() => {
+        console.log("⏰ Backup Timer: Rafraîchissement KPIs...");
+        fetchAndUpdateKPIs();
+    }, 60000); // 60000 ms = 1 minute
 });
 
 function toLocalISOString(date) { try { const offset = date.getTimezoneOffset() * 60000; return (new Date(date - offset)).toISOString().slice(0, 16); } catch (e) { return ""; } }
@@ -481,5 +484,128 @@ function filterTable(tableId, query) {
 function formatISODate(isoString) { try { return new Intl.DateTimeFormat('fr-FR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(isoString)); } catch (e) { return '--'; } }
 function formatValue(v, d = 0, u = '') { return (v != null && !isNaN(v)) ? parseFloat(v).toFixed(d) + u : '--'; }
 function drawMiniSpectrum(id, d) { const c = document.getElementById(id); if (c) new Chart(c, { type: 'bar', data: { labels: [1, 2, 3, 4, 5, 6], datasets: [{ data: d, backgroundColor: '#605ca8' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: false, tooltip: false }, scales: { x: { display: false }, y: { display: false } }, animation: false } }); }
-function playAudio(f) { const c = document.getElementById('global-audio-player-container'); if (!c) return; if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; } const a = new Audio(); a.src = '/audio_files/' + f; a.crossOrigin = "anonymous"; a.volume = 0.8; c.innerHTML = `<div class="waveform-wrapper" style="display:flex;align-items:center;gap:20px;background:#2d2d2d;padding:15px;border-top:4px solid #00c0ef;box-shadow:0 -5px 15px rgba(0,0,0,0.5);"><div class="waveform-controls"><button id="pp_btn" class="btn-play-pause" style="width:60px;height:60px;font-size:24px;border-radius:50%;background:#00c0ef;border:none;color:white;cursor:pointer;"><i class="fa fa-play"></i></button></div><div class="waveform-visual" style="flex-grow:1;"><div id="wf"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:5px;"><i id="vol_icon" class="fa fa-volume-up" style="color:#b8c7ce;cursor:pointer;font-size:18px;"></i><input type="range" id="vol_slider" min="0" max="1" step="0.05" value="0.8" style="width:150px;cursor:pointer;accent-color:#00c0ef;"></div><button class="btn-close-player" id="close_btn" style="background:none;border:none;color:#777;font-size:24px;cursor:pointer;margin-left:10px;"><i class="fa fa-times"></i></button></div>`; wavesurfer = WaveSurfer.create({ container: '#wf', media: a, waveColor: '#00c0ef', progressColor: '#fff', height: 100, normalize: true, cursorWidth: 2, barWidth: 3, barGap: 2, barRadius: 3 }); wavesurfer.on('ready', () => { wavesurfer.play(); document.getElementById('pp_btn').innerHTML = '<i class="fa fa-pause"></i>'; }); wavesurfer.on('finish', () => { document.getElementById('pp_btn').innerHTML = '<i class="fa fa-play"></i>'; }); document.getElementById('pp_btn').onclick = () => { wavesurfer.playPause(); document.getElementById('pp_btn').innerHTML = `<i class="fa ${wavesurfer.isPlaying() ? 'fa-pause' : 'fa-play'}"></i>`; }; const s = document.getElementById('vol_slider'); const v = document.getElementById('vol_icon'); let lv = 0.8; s.oninput = function () { const val = parseFloat(this.value); a.volume = val; uV(val); if (val > 0) lv = val; }; v.onclick = function () { if (a.volume > 0) { a.volume = 0; s.value = 0; uV(0); } else { a.volume = lv; s.value = lv; uV(lv); } }; function uV(val) { v.className = val === 0 ? 'fa fa-volume-off' : (val < 0.5 ? 'fa fa-volume-down' : 'fa fa-volume-up'); } document.getElementById('close_btn').onclick = () => { if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; } c.innerHTML = ''; }; }
+function playAudio(f) {
+    const c = document.getElementById('global-audio-player-container');
+    if (!c) return;
+
+    // Nettoyage
+    if (wavesurfer) {
+        wavesurfer.destroy();
+        wavesurfer = null;
+    }
+
+    // Création élément Audio
+    const audioEl = new Audio();
+    audioEl.src = '/audio_files/' + f;
+    audioEl.crossOrigin = "anonymous";
+    // Note : Sur mobile, le réglage du volume via JS est souvent ignoré (contrôle matériel uniquement)
+    audioEl.volume = 0.8;
+
+    // HTML du lecteur
+    c.innerHTML = `
+        <div class="waveform-wrapper" style="display:flex;align-items:center;gap:15px;background:#2d2d2d;padding:15px;border-top:4px solid #00c0ef;box-shadow:0 -5px 15px rgba(0,0,0,0.5);">
+            <div class="waveform-controls">
+                <button id="pp_btn" class="btn-play-pause" style="width:60px;height:60px;font-size:24px;border-radius:50%;background:#00c0ef;border:none;color:white;cursor:pointer; touch-action: manipulation;">
+                    <i class="fa fa-play"></i>
+                </button>
+            </div>
+            <div class="waveform-visual" style="flex-grow:1;">
+                <div id="wf"></div>
+            </div>
+            
+            <!-- Volume (caché sur petit écran mobile car souvent inutile/inutilisable) -->
+            <div class="vol-control" style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+                <i id="vol_icon" class="fa fa-volume-up" style="color:#b8c7ce;cursor:pointer;font-size:18px;"></i>
+                <input type="range" id="vol_slider" min="0" max="1" step="0.05" value="0.8" style="width:100px;cursor:pointer;accent-color:#00c0ef;">
+            </div>
+
+            <button class="btn-close-player" id="close_btn" style="background:none;border:none;color:#777;font-size:24px;cursor:pointer;margin-left:10px;">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>`;
+
+    // Init WaveSurfer
+    wavesurfer = WaveSurfer.create({
+        container: '#wf',
+        media: audioEl, // Mode Hybride
+        waveColor: '#00c0ef',
+        progressColor: '#ffffff',
+        height: 80, // Un peu moins haut sur mobile pour gagner de la place
+        normalize: true,
+        cursorWidth: 2,
+        barWidth: 3,
+        barGap: 2,
+        barRadius: 3
+    });
+
+    // --- LOGIQUE DE LECTURE ROBUSTE (MOBILE) ---
+    wavesurfer.on('ready', () => {
+        // On tente de jouer
+        const playPromise = wavesurfer.play();
+
+        if (playPromise !== undefined) {
+            playPromise.then(_ => {
+                // Ça a marché (PC) -> On met l'icône Pause
+                document.getElementById('pp_btn').innerHTML = '<i class="fa fa-pause"></i>';
+            })
+                .catch(error => {
+                    // Ça a bloqué (Mobile) -> On laisse l'icône Play
+                    // L'utilisateur devra cliquer lui-même
+                    console.log("Auto-play bloqué par le navigateur (Normal sur mobile):", error);
+                    document.getElementById('pp_btn').innerHTML = '<i class="fa fa-play"></i>';
+                });
+        }
+    });
+
+    wavesurfer.on('finish', () => {
+        document.getElementById('pp_btn').innerHTML = '<i class="fa fa-play"></i>';
+    });
+
+    // Clic manuel sur le bouton Play/Pause
+    const ppBtn = document.getElementById('pp_btn');
+    ppBtn.onclick = (e) => {
+        e.preventDefault(); // Empêche les doubles clics tactiles
+        wavesurfer.playPause();
+
+        // Mise à jour visuelle immédiate
+        setTimeout(() => {
+            const icon = wavesurfer.isPlaying() ? 'fa-pause' : 'fa-play';
+            ppBtn.innerHTML = `<i class="fa ${icon}"></i>`;
+        }, 50);
+    };
+
+    // Gestion Volume
+    const volSlider = document.getElementById('vol_slider');
+    const volIcon = document.getElementById('vol_icon');
+    let lastVolume = 0.8;
+
+    if (volSlider && volIcon) {
+        volSlider.oninput = function () {
+            const val = parseFloat(this.value);
+            audioEl.volume = val;
+            updateVolIcon(val);
+            if (val > 0) lastVolume = val;
+        };
+        volIcon.onclick = function () {
+            if (audioEl.volume > 0) {
+                audioEl.volume = 0; volSlider.value = 0; updateVolIcon(0);
+            } else {
+                audioEl.volume = lastVolume; volSlider.value = lastVolume; updateVolIcon(lastVolume);
+            }
+        };
+    }
+
+    function updateVolIcon(val) {
+        if (!volIcon) return;
+        if (val === 0) volIcon.className = 'fa fa-volume-off';
+        else if (val < 0.5) volIcon.className = 'fa fa-volume-down';
+        else volIcon.className = 'fa fa-volume-up';
+    }
+
+    // Fermeture
+    document.getElementById('close_btn').onclick = () => {
+        if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+        c.innerHTML = '';
+    };
+}
 let notifTimeout; function showNotification(message) { const b = document.getElementById('notification-banner'); const t = document.getElementById('notif-text'); if (!b || !t) return; t.textContent = message; b.classList.add('visible'); if (notifTimeout) clearTimeout(notifTimeout); notifTimeout = setTimeout(() => { b.classList.remove('visible'); }, 10000); }

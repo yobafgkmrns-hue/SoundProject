@@ -982,3 +982,160 @@ body.loading #loading-overlay {
 .section-header.first {
     margin-top: 10px;
 }
+
+/* ========================================================================== */
+/* --- RESPONSIVE DESIGN (SMARTPHONE) --- */
+/* ========================================================================== */
+
+@media (max-width: 768px) {
+
+    /* Cache le volume sur mobile pour laisser place au bouton Play */
+    .vol-control {
+        display: none !important;
+    }
+
+    /* Le bouton Play reste bien accessible */
+    #pp_btn {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 20px !important;
+    }
+
+    /* 1. HEADER & NAV */
+    .main-header {
+        height: auto;
+        /* Hauteur libre */
+        padding: 10px;
+        position: relative;
+        /* Plus fixe sur mobile pour gagner de la place */
+    }
+
+    .navbar {
+        flex-direction: column;
+        /* Empiler les éléments */
+        gap: 10px;
+    }
+
+    .navbar-right-menu {
+        width: 100%;
+        justify-content: space-between;
+        margin-right: 0 !important;
+    }
+
+    #last-updated {
+        margin: 5px 0;
+        font-size: 16px !important;
+        /* Plus petit */
+        line-height: normal;
+    }
+
+    .wrapper {
+        margin-top: 0;
+        /* Comme le header n'est plus fixe */
+        padding: 10px;
+    }
+
+    /* 2. BARRE DE CONTRÔLE */
+    .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+    }
+
+    .btn-group {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .btn-group .period-btn {
+        flex-grow: 1;
+        /* Boutons étirés */
+        padding: 8px 5px;
+        font-size: 14px;
+    }
+
+    .date-input-group {
+        margin-top: 10px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    #date-picker {
+        width: 100%;
+    }
+
+    /* 3. SCÈNE RUE DE PARIS */
+    /* On réduit la hauteur sur mobile pour voir le reste */
+    #animation-stage {
+        height: 180px !important;
+    }
+
+    .paris-buildings {
+        background-size: 600px 100% !important;
+        /* On réduit l'échelle */
+        height: 180px !important;
+    }
+
+    .skyline {
+        height: 180px !important;
+    }
+
+    .moving-vehicle {
+        font-size: 35px !important;
+        /* Voitures plus petites */
+        bottom: 10px !important;
+    }
+
+    /* 4. HAUTEURS DES GRAPHIQUES */
+    /* On écrase les hauteurs fixes définies dans le HTML */
+    .chart-container-responsive {
+        height: 300px !important;
+        /* 300px suffisent sur mobile */
+    }
+
+    .box-body.table-responsive {
+        height: 300px !important;
+    }
+
+    /* 5. TABLEAUX */
+    /* Police un peu plus petite pour éviter le scroll horizontal excessif */
+    #events-period-table th,
+    #events-period-table td,
+    #top-events-table th,
+    #top-events-table td {
+        font-size: 14px !important;
+        padding: 5px !important;
+        height: auto !important;
+    }
+
+    /* On cache certaines colonnes moins utiles sur mobile ? Optionnel */
+    /* .hide-mobile { display: none; } */
+
+    /* 6. KPIS */
+    .info-box {
+        min-height: 80px;
+    }
+
+    .info-box-icon {
+        width: 70px;
+        height: 80px;
+        font-size: 30px;
+    }
+
+    .info-box-number {
+        font-size: 20px;
+    }
+
+    .kpi-trend,
+    .kpi-long-term-trend {
+        font-size: 14px;
+        /* On réduit les tendances */
+    }
+
+    /* 7. INDICES DU BAS */
+    #indices-table td:nth-child(3) {
+        /* Valeur */
+        font-size: 20px !important;
+    }
+
+}
